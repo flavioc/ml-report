@@ -1,0 +1,68 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips12submit_e,times}
+\usepackage{url}
+%\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
+
+
+\title{Structured Statistical Source Code Prediction}
+
+\author{
+Cyrus Omar\\
+\texttt{comar@cs.cmu.edu}
+\And
+Salil Joshi \\
+\texttt{	salilj@cs.cmu.edu}
+\And
+Fl\'{a}vio Cruz\\
+\texttt{fmfernan@cs.cmu.edu}
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak  that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\nipsfinalcopy % Uncomment for camera-ready version
+
+\begin{document}
+
+
+\maketitle
+
+%\begin{abstract}
+%The abstract paragraph should be indented 1/2~inch (3~picas) on both left and
+%right-hand margins. Use 10~point type, with a vertical spacing of 11~points.
+%The word \textbf{Abstract} must be centered, bold, and in point size 12. Two
+%line spaces precede the abstract. The abstract must be limited to one
+%paragraph.
+%\end{abstract}
+\vspace{-25pt}
+\subsection*{Project Description}
+Programming languages are formal systems with rich syntactic and semantic structure. They are also human systems, in that they are used extensively by people in patterned ways to express their intent. Many tools have been designed to help people write code more efficiently by predicting the developer's intent. For example, code completion systems in editors like Eclipse display pop-up menus containing members relevant to the class that the developer is working with, potentially saving the developer keystrokes. Typical code completion systems use only syntactic and semantic information about the language itself, rather than data about how developers have written programs in the past. Recent work by Hindle et al. [1] showed that source code could be modeled statistically using a simple $n$-gram model that used a simple tokenized representation of source code.
+
+Our project aims to unite these {\em structured} and {\em statistical} approaches to source code prediction. Specifically, rather than using a linear, tokenized representation of source code, we would like to do prediction on a more natural representation of source code -- the {\em syntax tree}. Moreover, we would like to constrain our predictions using on the semantics of the language and libraries being used, in particular by using {\em type information} to constrain the prediction space drastically. For example, if a user has entered the code \verb|Planet destination = |, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|), then we can {\em structurally} constrain the completion by restricting it to members of the \verb|Planet| enumeration, variables of type \verb|Planet| in the scope and functions returning \verb|Planet|, then {\em statistically} predict the value based on an analysis of prior code corpuses that contain expressions of type \verb|Planet| in a similar context.
+\subsection*{Dataset}
+There are a number of code corpuses that are publicly available. We plan to use the Qualitas Corpus, available at \url{http://qualitascorpus.com/}.
+
+\subsection*{Software To Be Written}
+We will write the prediction system itself and code to validate it. Integration with an IDE is not relevant to this class and will be left as future work.
+
+\subsection*{Midway Report Milestone}
+We will have written code to generate relevant statistics from code in the Qualitas Corpus and planned our strategy for incorporating type information.
+
+\subsubsection*{References / Papers To Read}
+\small{
+[1] A.ÊHindle, E.ÊT. Barr, Z.ÊSu, M.ÊGabel, and P.ÊDevanbu. On the naturalness of software. In Proceedings of the 2012 International Conference on Software Engineering, ICSE 2012, pages 837Ð847, Piscataway, NJ, USA, 2012. IEEE Press.
+
+[2] M. Bruch, M. Monperrus, and M. Mezini, ÒLearning from examples to improve code completion systems,Ó in Proceedings, ACM SIGSOFT ESEC/FSE, 2009.
+
+[3] D. Hou and D. Pletcher, ÒAn Evaluation of the Strategies of Sorting, Filtering, and Grouping API Methods for Code Com- pletion,Ó in Proceedings, ICSM, 2011.
+}
+
+\end{document}
