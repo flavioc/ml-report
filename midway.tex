@@ -32,23 +32,22 @@
 Programming languages are formal systems with rich syntactic and semantic structure. They are
 also human systems, in that they are used extensively by people in patterned ways to express their
 intent. Many tools have been designed to help people write code more efficiently by predicting
-the developer’s intent. For example, code completion systems in editors like Eclipse display pop-
+the developer's intent. For example, code completion systems in editors like Eclipse display pop-
 up menus containing members relevant to the class that the developer is working with, potentially
-saving the developer keystrokes. Typical code completion systems use only syntactic and semantic
+saving some keystrokes. Typical code completion systems use only syntactic and semantic
 information about the language itself, rather than data about how developers have written programs
 in the past. Recent work by Hindle et al. [1] showed that source code could be modeled statistically
 using a simple n-gram model that used a simple tokenized representation of source code.
 
-Our project aims to unite these structured and statistical approaches to source code prediction.
+Our project aims to unite the structured and statistical approaches to source code prediction.
 Specifically, rather than using a linear, tokenized representation of source code, we would like to do
-prediction on a more natural representation of source code – the syntax tree.  We also utilize the semantics of the language by conditioning our prediction on the expected \emph{type} of the expression, and on the \emph{context} in which the expression occurs (i.e.\ whether the expression is an argument to a function, or the test used in an if statement, etc.).
+prediction on a more natural representation of source code – the syntax tree.  We also utilize the semantics of the language by conditioning our prediction on the expected \emph{type} of the expression, and on the \emph{context} in which the expression occurs (i.e.\ whether the expression is an argument of a method call, or the test used in an if statement, etc.).
 
 The expected type of the expression is used to constrain the prediction space.  For example, if a
 user has entered the code \texttt{Planet destination = }, where Planet is an enumeration con-
-taining Mercury, Venus, Earth, etc. (but not Pluto), then we know that the only valid predictions are members of the Planet enumeration, variables of type Planet in the scope and functions returning Planet. 
+taining Mercury, Venus, Earth, etc. (but not Pluto), then we know that the only valid predictions are members of the Planet enumeration, variables of type Planet in the scope and methods returning \texttt{Planet}.
 
-The context in this example is an assignment context . The prediction is then made based on how often an expression in such a context was found to be a literal or a variable or a function call in our prior analysis of code corpuses. Our claim is that code is written in repeatable patterns, and that the context in which a piece of code appears is relevant when identifying the pattern, and therefore relevant when making a prediction.
-
+The context in this example is an assignment context. The prediction is then made based on how often an expression in such context was found to be a literal or a variable or a method invocation from our prior analysis of the code. Our claim is that code is written in repeatable patterns, and that the context in which a piece of code appears is relevant when identifying the pattern, and therefore relevant when making a prediction.
 
 TODO Write applications somewhere\\
 Improved code prediction is useful as an IDE tool to increase productivity by speeding up the more mundane aspects of programming.
@@ -71,7 +70,7 @@ Here \texttt{type} is the expected type of the expression. If a given expression
 \begin{itemize}
   \item Assignment: \texttt{Planet p =} $\Box$
   \item If-test: $\texttt{if }\Box\texttt{ then}\ldots\texttt{else}\ldots$
-  \item Function arguments: $\texttt{O.foo }\Box$
+  \item Method arguments: $\texttt{O.foo }\Box$
 \end{itemize}
 
 The $e$ in the equation above ranges over possible expressions. However we do not search over \emph{all} possible expressions. This is impossible since there may be an infinite number of well formed expressions. Moreover, it is unneccessary since we need only predict the \emph{root} of the syntax tree for $e$. The rest of the nodes in the tree can then be predicted recursively.
@@ -80,7 +79,7 @@ Thus we first identify the three forms that the tree $e$ can take:
 \begin{itemize}
   \item $e$ may be just a literal of the appropriate type. For example if the type is an \texttt{enum}, $e$ may be a member of that \texttt{enum}
   \item $e$ may be a variable in scope of the appropriate type.
-  \item $e$ may be a call to a function that returns the appropriate type. In this case, we predict only the function itself. The arguments to the function can be predicted later recursively.
+  \item $e$ may be a call to a method that returns the appropriate type. In this case, we predict only the method itself. The arguments to the method can be predicted later recursively.
 \end{itemize}
 
 \subsection*{Analysis}
@@ -91,9 +90,9 @@ The parameters to our model then, are the probabilities of occurrences of each o
       \item Probability that $e$ is a specific literal $l$, given that it is \emph{some} literal: \\$P(e = l ~|~ e \text{ is a literal},  \texttt{type} , \texttt{context} )$
     \end{itemize}
   \item Probability that $e$ is some (any) variable $x$ in scope: $P(e = x ~|~ \texttt{type} , \texttt{context})$
-  \item Probability that $e$ is a function call: $P(e \text{ is a function call} ~|~  \texttt{type} , \texttt{context} ) $
+  \item Probability that $e$ is a method call: $P(e \text{ is a method call} ~|~  \texttt{type} , \texttt{context} ) $
     \begin{itemize}
-      \item Probability that $e$ is a call to a specific function $f$, given that it is \emph{some} function call: \\$P(e = f \ldots ~|~ e \text{ is a function call},  \texttt{type} , \texttt{context} )$
+      \item Probability that $e$ is a call to a specific method $f$, given that it is \emph{some} method call: \\$P(e = f \ldots ~|~ e \text{ is a method call},  \texttt{type} , \texttt{context} )$
     \end{itemize}
 \end{itemize}
 
@@ -103,11 +102,11 @@ Since the number of possible contexts is small and finite, we will always have s
 $$ e = \arg\max_e P(e ~|~ \texttt{context} ) = \arg\max_e \Sigma_{\texttt{type}} P(e ~|~ \texttt{type} , \texttt{context} ) $$
 
 Then the \emph{form} of $e$ can be predicted using this equation, however it will not give us a useful prediction for the specific expression (since, if we have not seen the expected type before, we cannot have seen expressions of that type before). So when making a prediction, we use a two-step method: First predict the most likely form of the predicted expression, then either predict or try to guess the specific expression. There are three possibilities for the form of $e$:
-\begin{itemize}
-  \item Literal: If we have data available about probabilities of literals of the expected type, then we may use that to make a prediction. However if we do not, then we predict \emph{any} literal of the expected type.
-  \item Variable: Here there are two possibilities. We may either predict the most \emph{recently} used variable in scope, or the most \emph{frequently} used variable in scope. We need further analysis and experimentation to decide which of these two possibilities gives more useful results.
-  \item Function Call: Similar to the case for literals. If we have data available about probabilities of functions that return the expected type, then we may use that to make a prediction. However if we do not, then we predict any function that returns the expected type.
-\end{itemize}
+\begin{description}
+  \item[Literal:] If we have data available about probabilities of literals of the expected type, then we may use that to make a prediction. However if we do not, then we predict \emph{any} literal of the expected type.
+  \item[Variable:] Here there are two possibilities. We may either predict the most \emph{recently} used variable in scope, or the most \emph{frequently} used variable in scope. We need further analysis and experimentation to decide which of these two possibilities gives more useful results.
+  \item[Method Call:] Similar to the case for literals. If we have data available about probabilities of methods that return the expected type, then we may use that to make a prediction. However if we do not, then we predict any method that returns the expected type.
+\end{description}
 
 This two-step approach negates the need to solve the difficult problem of smoothing our data. Smoothing at the level of contexts is unneccessary since we always have enough data. Smoothing at the level of types is also not required, since the prediction algorithm can handle cases where we have insufficient data in a natural fashion.
 
@@ -123,12 +122,11 @@ To collect statistics about a given code corpus, we first parse each Java file a
    \item[Variable Visitor:] For each type, we count the number of times a variable of this type was referenced in the code.
 
    \item[Method Visitor:] We group methods by the return type, so that we can count the number of times each method is used.
-
 \end{description}
 
 \section*{Experiments}
 
-Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we will use already available software code to to automatically test our prediction facilities.
+Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we will use already available software code to automatically test our prediction facilities.
 
 Our experiments will make use of freely available code corpuses code such as Qualitas Corpus (\url{http://qualitascorpus.com/}).
 
