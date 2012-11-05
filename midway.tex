@@ -5,7 +5,6 @@
 \usepackage{url}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
-
 \title{Structured Statistical Code Prediction}
 
 \author{
@@ -36,7 +35,7 @@ the developer's intent. For example, code completion systems in editors like Ecl
 up menus containing members relevant to the class that the developer is working with, potentially
 saving some keystrokes. Typical code completion systems use only syntactic and semantic
 information about the language itself, rather than data about how developers have written programs
-in the past. Recent work by Hindle et al. [1] showed that source code could be modeled statistically
+in the past. Recent work by Hindle et al.~\cite{Hindle:2012:NS:2337223.2337322} showed that source code could be modeled statistically
 using a simple n-gram model that used a simple tokenized representation of source code.
 
 Our project aims to unite the structured and statistical approaches to source code prediction.
@@ -58,7 +57,7 @@ Useful for debugging? Maybe? Somehow?
 
 \section*{Related Work}
 \section*{Method}
-We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{something}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
+We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{Bruch:2009:LEI:1595696.1595728}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
 \subsection*{Model}
 The model we use for code prediction can be stated as:
@@ -136,5 +135,10 @@ We create many partial versions that end with the start of a function call or va
 To get a better estimation of the classification error, we will build $K$ different models of the same code corpus by leaving one file out and then building the model using the remaining files. The file left out is then used as a test as described previously. Finally, we compute the average of the error from the classification error of the $K$ models.
 
 \section*{Conclusion}
+
+\subsubsection*{References}
+
+\bibliography{midway}
+\bibliographystyle{plain}
 
 \end{document}
