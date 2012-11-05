@@ -2,8 +2,8 @@
 \usepackage{nips12submit_e,times}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{url}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
-
 
 \title{Structured Statistical Code Prediction}
 
@@ -28,16 +28,36 @@
 \maketitle
 
 \section*{Introduction}
-Programming languages are formal systems with rich syntactic and semantic structure. They are also human systems, in that they are used extensively by people in patterned ways to express their intent. Many tools have been designed to help people write code more efficiently by predicting the developer's intent. For example, code completion systems in editors like Eclipse display pop-up menus containing members relevant to the class that the developer is working with, potentially saving the developer keystrokes. Typical code completion systems use only syntactic and semantic information about the language itself. Recent work by Hindle et al. [1] demonstrated that source code could be modeled statistically using a simple $n$-gram model that used a lexically-tokenized representation of code and suggested completions based on this information instead.
+Programming languages are formal systems with rich syntactic and semantic structure. They are
+also human systems, in that they are used extensively by people in patterned ways to express their
+intent. Many tools are designed to help people write code more efficiently by predicting
+the developer's intent. For example, code completion systems in editors like Eclipse display pop-up menus containing members relevant to the class that the developer is working with. 
 
-Our project aims to unite the {\em structured} and {\em statistical} approaches to source code prediction. More specifically, rather than using a linear, tokenized representation of source code, we would like to do prediction on a more natural representation of source code -- the {\em syntax tree}. Moreover, we would like to constrain our predictions using on the semantics of the language and libraries being used, in particular by using {\em type information} to constrain the prediction space drastically. For example, if a user has entered the Java code \verb|Planet destination = |, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|), then we can {\em structurally} constrain the completion by restricting it to members of the \verb|Planet| enumeration, variables of type \verb|Planet| in the scope and functions returning \verb|Planet|, then {\em statistically} predict the value based on an analysis of prior code corpuses that contain expressions of type \verb|Planet|, perhaps in a similar context.
+Typical code completion systems use only syntactic and semantic
+information about the language and APIs, rather than data about how developers have written programs
+in the past. Recent work by Hindle et al.~\cite{Hindle:2012:NS:2337223.2337322} showed, however, that source code could be modeled statistically
+using a simple n-gram model that used a tokenized, sequential representation of source code. 
 
-In addition to its applications to code completion systems in code editors like Eclipse, more accurate source code prediction could be useful for other tools. For example, programmers with severe physical impairments may benefit from more specialized tools that allow them convey source code using interface devices more limited than a keyboard, incorporating predictions to reduce the amount of information that needs to be conveyed.
+Our project aims to unite the structured and statistical approaches to source code prediction.
+Specifically, rather than using a tokenized representation of source code, we would like to do
+statistical prediction on a more natural representation of source code: the syntax tree.  We constrain our predictions by utilizing structural information, specifically: the expected \emph{type} of the expression, and the syntactic \emph{context} in which the expression occurs (e.g. whether the expression is an argument of a function call, the guard of an \verb|if| statement, etc.).
+
+For example, if a user has entered the code \texttt{Planet destination = }, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|), then we know that the only valid predictions are literal members of the \verb|Planet| enumeration, variables of type \verb|Planet| in the scope or calls to methods with return type \texttt{Planet}. The context in this example is an assignment context. The prediction is then made based first on how often an expression of type \verb|Planet| in such context was found to be a literal or a variable or a method invocation from our prior analysis of a code corpus, and further refined based on information about specific literals, variables or methods that is available from these corpus analyses as well (smoothed using some suitable method in cases where enough information is not available).
+
+In addition to applications to code completion systems in code editors like Eclipse, more accurate source code prediction techniques could be useful for other tools. For example, programmers with severe physical impairments may benefit from more specialized tools that allow them convey source code using devices more limited than a keyboard, incorporating predictions to reduce the amount of information that needs to be conveyed explicitly.
+
 \section*{Related Work}
+As mentioned above, work by Hindle et al. \cite{Hindle:2012:NS:2337223.2337322} showed that using a simple $n$-gram model of source code, represented as sequences of tokens, produced reasonably accurate predictions. This work (published this summer) suggested constraining this model using structural information as future work that might further improve predictions. 
+
+Work examining the ``uniqueness'' of software has found that source code can often be decomposed into commonly-seen motifs \cite{Gabel:2010:FSE}, further suggesting that prediction that uses structural information may be a particularly helpful approach in the domain of source code.
+
+Several code completion systems that incorporate statistical information in a limited context, such as specifically for predicting which methods of a class will be called, have been produced in the past \cite{Bruch:2009:LEI:1595696.1595728,robbes_how_2008}. The work by Robbes and Lanza \cite{robbes_how_2008} defined a methodology by which to compare different prediction engines in such settings, which can be generalized to our approach as well. 
+
+Other systems, such as Calcite \cite{mooty_calcite:_2010}, have produced contextually-relevant {\em code snippets} or examples drawn from a code corpus or web search, where more frequently encountered snippets are preferentially shown. These can be considered special cases of the approach we are taking in our project.
 
 
 \section*{Method}
-We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{something}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
+We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model (see above). Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
 \subsection*{Model}
 The model we use for code prediction can be stated as:
@@ -49,7 +69,7 @@ Here \texttt{type} is the expected type of the expression. If a given expression
 \begin{itemize}
   \item Assignment: \texttt{Planet p =} $\Box$
   \item If-test: $\texttt{if }\Box\texttt{ then}\ldots\texttt{else}\ldots$
-  \item Function arguments: $\texttt{O.foo }\Box$
+  \item Method arguments: $\texttt{O.foo }\Box$
 \end{itemize}
 
 The $e$ in the equation above ranges over possible expressions. However we do not search over \emph{all} possible expressions. This is impossible since there may be an infinite number of well formed expressions. Moreover, it is unneccessary since we need only predict the \emph{root} of the syntax tree for $e$. The rest of the nodes in the tree can then be predicted recursively.
@@ -58,7 +78,7 @@ Thus we first identify the three forms that the tree $e$ can take:
 \begin{itemize}
   \item $e$ may be just a literal of the appropriate type. For example if the type is an \texttt{enum}, $e$ may be a member of that \texttt{enum}
   \item $e$ may be a variable in scope of the appropriate type.
-  \item $e$ may be a call to a function that returns the appropriate type. In this case, we predict only the function itself. The arguments to the function can be predicted later recursively.
+  \item $e$ may be a call to a method that returns the appropriate type. In this case, we predict only the method itself. The arguments to the method can be predicted later recursively.
 \end{itemize}
 
 \subsection*{Analysis}
@@ -69,9 +89,9 @@ The parameters to our model then, are the probabilities of occurrences of each o
       \item Probability that $e$ is a specific literal $l$, given that it is \emph{some} literal: \\$P(e = l ~|~ e \text{ is a literal},  \texttt{type} , \texttt{context} )$
     \end{itemize}
   \item Probability that $e$ is some (any) variable $x$ in scope: $P(e = x ~|~ \texttt{type} , \texttt{context})$
-  \item Probability that $e$ is a function call: $P(e \text{ is a function call} ~|~  \texttt{type} , \texttt{context} ) $
+  \item Probability that $e$ is a method call: $P(e \text{ is a method call} ~|~  \texttt{type} , \texttt{context} ) $
     \begin{itemize}
-      \item Probability that $e$ is a call to a specific function $f$, given that it is \emph{some} function call: \\$P(e = f \ldots ~|~ e \text{ is a function call},  \texttt{type} , \texttt{context} )$
+      \item Probability that $e$ is a call to a specific method $f$, given that it is \emph{some} method call: \\$P(e = f \ldots ~|~ e \text{ is a method call},  \texttt{type} , \texttt{context} )$
     \end{itemize}
 \end{itemize}
 
@@ -81,11 +101,11 @@ Since the number of possible contexts is small and finite, we will always have s
 $$ e = \arg\max_e P(e ~|~ \texttt{context} ) = \arg\max_e \Sigma_{\texttt{type}} P(e ~|~ \texttt{type} , \texttt{context} ) $$
 
 Then the \emph{form} of $e$ can be predicted using this equation, however it will not give us a useful prediction for the specific expression (since, if we have not seen the expected type before, we cannot have seen expressions of that type before). So when making a prediction, we use a two-step method: First predict the most likely form of the predicted expression, then either predict or try to guess the specific expression. There are three possibilities for the form of $e$:
-\begin{itemize}
-  \item Literal: If we have data available about probabilities of literals of the expected type, then we may use that to make a prediction. However if we do not, then we predict \emph{any} literal of the expected type.
-  \item Variable: Here there are two possibilities. We may either predict the most \emph{recently} used variable in scope, or the most \emph{frequently} used variable in scope. We need further analysis and experimentation to decide which of these two possibilities gives more useful results.
-  \item Function Call: Similar to the case for literals. If we have data available about probabilities of functions that return the expected type, then we may use that to make a prediction. However if we do not, then we predict any function that returns the expected type.
-\end{itemize}
+\begin{description}
+  \item[Literal:] If we have data available about probabilities of literals of the expected type, then we may use that to make a prediction. However if we do not, then we predict \emph{any} literal of the expected type.
+  \item[Variable:] Here there are two possibilities. We may either predict the most \emph{recently} used variable in scope, or the most \emph{frequently} used variable in scope. We need further analysis and experimentation to decide which of these two possibilities gives more useful results.
+  \item[Method Call:] Similar to the case for literals. If we have data available about probabilities of methods that return the expected type, then we may use that to make a prediction. However if we do not, then we predict any method that returns the expected type.
+\end{description}
 
 This two-step approach negates the need to solve the difficult problem of smoothing our data. Smoothing at the level of contexts is unneccessary since we always have enough data. Smoothing at the level of types is also not required, since the prediction algorithm can handle cases where we have insufficient data in a natural fashion.
 
@@ -101,21 +121,23 @@ To collect statistics about a given code corpus, we first parse each Java file a
    \item[Variable Visitor:] For each type, we count the number of times a variable of this type was referenced in the code.
 
    \item[Method Visitor:] We group methods by the return type, so that we can count the number of times each method is used.
-
 \end{description}
 
-\section*{Experiment}
+\section*{Experiments}
 
-Our experiments will make use of 
+Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we will use already available software code to automatically test our prediction facilities.
+
+Our experiments will make use of freely available code corpuses code such as Qualitas Corpus (\url{http://qualitascorpus.com/}).
+
+From each code corpus, we leave out one source code file to be used as a test.
+We create many partial versions that end with the start of a function call or variable declaration. This emulates what would happen when a programmer would try to write the code inside the IDE. Therefore, we can apply our model to predict which code is mostly likely to be typed next. Finally, we compute the average of the classification error for this single file from all the partial versions.
+
+To get a better estimation of the classification error, we will build $K$ different models of the same code corpus by leaving one file out and then building the model using the remaining files. The file left out is then used as a test as described previously. Finally, we compute the average of the error from the classification error of the $K$ models.
 
 \section*{Conclusion}
 
-\section*{References}
-\small{
-[1] A.ÊHindle, E.ÊT. Barr, Z.ÊSu, M.ÊGabel, and P.ÊDevanbu. On the naturalness of software. In Proceedings of the 2012 International Conference on Software Engineering, ICSE 2012, pages 837Ğ847, Piscataway, NJ, USA, 2012. IEEE Press.
+\bibliography{midway}
+\bibliographystyle{plain}
 
-[2] M. Bruch, M. Monperrus, and M. Mezini, ÒLearning from examples to improve code completion systems,Ó in Proceedings, ACM SIGSOFT ESEC/FSE, 2009.
-
-[3] D. Hou and D. Pletcher, ÒAn Evaluation of the Strategies of Sorting, Filtering, and Grouping API Methods for Code Com- pletion,Ó in Proceedings, ICSM, 2011.
-}
 \end{document}
+>>>>>>> 983d53891bbae807fa16ba4c6236d53235990beb
