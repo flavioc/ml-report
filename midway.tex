@@ -28,35 +28,14 @@
 \maketitle
 
 \section*{Introduction}
-Programming languages are formal systems with rich syntactic and semantic structure. They are
-also human systems, in that they are used extensively by people in patterned ways to express their
-intent. Many tools have been designed to help people write code more efficiently by predicting
-the developerâ€™s intent. For example, code completion systems in editors like Eclipse display pop-
-up menus containing members relevant to the class that the developer is working with, potentially
-saving the developer keystrokes. Typical code completion systems use only syntactic and semantic
-information about the language itself, rather than data about how developers have written programs
-in the past. Recent work by Hindle et al. [1] showed that source code could be modeled statistically
-using a simple n-gram model that used a simple tokenized representation of source code.
+Programming languages are formal systems with rich syntactic and semantic structure. They are also human systems, in that they are used extensively by people in patterned ways to express their intent. Many tools have been designed to help people write code more efficiently by predicting the developer's intent. For example, code completion systems in editors like Eclipse display pop-up menus containing members relevant to the class that the developer is working with, potentially saving the developer keystrokes. Typical code completion systems use only syntactic and semantic information about the language itself. Recent work by Hindle et al. [1] demonstrated that source code could be modeled statistically using a simple $n$-gram model that used a lexically-tokenized representation of code and suggested completions based on this information instead.
 
-Our project aims to unite these structured and statistical approaches to source code prediction.
-Specifically, rather than using a linear, tokenized representation of source code, we would like to do
-prediction on a more natural representation of source code â€“ the syntax tree.  We also utilize the semantics of the language by conditioning our prediction on the expected \emph{type} of the expression, and on the \emph{context} in which the expression occurs (i.e.\ whether the expression is an argument to a function, or the test used in an if statement, etc.).
+Our project aims to unite the {\em structured} and {\em statistical} approaches to source code prediction. More specifically, rather than using a linear, tokenized representation of source code, we would like to do prediction on a more natural representation of source code -- the {\em syntax tree}. Moreover, we would like to constrain our predictions using on the semantics of the language and libraries being used, in particular by using {\em type information} to constrain the prediction space drastically. For example, if a user has entered the Java code \verb|Planet destination = |, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|), then we can {\em structurally} constrain the completion by restricting it to members of the \verb|Planet| enumeration, variables of type \verb|Planet| in the scope and functions returning \verb|Planet|, then {\em statistically} predict the value based on an analysis of prior code corpuses that contain expressions of type \verb|Planet|, perhaps in a similar context.
 
-The expected type of the expression is used to constrain the prediction space.  For example, if a
-user has entered the code \texttt{Planet destination = }, where Planet is an enumeration con-
-taining Mercury, Venus, Earth, etc. (but not Pluto), then we know that the only valid predictions are members of the Planet enumeration, variables of type Planet in the scope and functions returning Planet. 
-
-The context in this example is an assignment context . The prediction is then made based on how often an expression in such a context was found to be a literal or a variable or a function call in our prior analysis of code corpuses. Our claim is that code is written in repeatable patterns, and that the context in which a piece of code appears is relevant when identifying the pattern, and therefore relevant when making a prediction.
-
-
-TODO Write applications somewhere\\
-Improved code prediction is useful as an IDE tool to increase productivity by speeding up the more mundane aspects of programming.
-
-Useful for programmers with physical impairments.
-
-Useful for debugging? Maybe? Somehow?
-
+In addition to its applications to code completion systems in code editors like Eclipse, more accurate source code prediction could be useful for other tools. For example, programmers with severe physical impairments may benefit from more specialized tools that allow them convey source code using interface devices more limited than a keyboard, incorporating predictions to reduce the amount of information that needs to be conveyed.
 \section*{Related Work}
+
+
 \section*{Method}
 We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{something}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
@@ -130,4 +109,13 @@ To collect statistics about a given code corpus, we first parse each Java file a
 Our experiments will make use of 
 
 \section*{Conclusion}
+
+\section*{References}
+\small{
+[1] A.ÊHindle, E.ÊT. Barr, Z.ÊSu, M.ÊGabel, and P.ÊDevanbu. On the naturalness of software. In Proceedings of the 2012 International Conference on Software Engineering, ICSE 2012, pages 837Ð847, Piscataway, NJ, USA, 2012. IEEE Press.
+
+[2] M. Bruch, M. Monperrus, and M. Mezini, ÒLearning from examples to improve code completion systems,Ó in Proceedings, ACM SIGSOFT ESEC/FSE, 2009.
+
+[3] D. Hou and D. Pletcher, ÒAn Evaluation of the Strategies of Sorting, Filtering, and Grouping API Methods for Code Com- pletion,Ó in Proceedings, ICSM, 2011.
+}
 \end{document}
