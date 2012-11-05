@@ -2,6 +2,7 @@
 \usepackage{nips12submit_e,times}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{url}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -127,7 +128,15 @@ To collect statistics about a given code corpus, we first parse each Java file a
 
 \section*{Experiment}
 
-Our experiments will make use of 
+Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we will use already available software code to to automatically test our prediction facilities.
+
+Our experiments will make use of freely available code corpuses code such as Qualitas Corpus (\url{http://qualitascorpus.com/}).
+
+From each code corpus, we leave out one source code file to be used as a test.
+We create many partial versions that end with the start of a function call or variable declaration. This emulates what would happen when a programmer would try to write the code inside the IDE. Therefore, we can apply our model to predict which code is mostly likely to be typed next. Finally, we compute the average of the classification error for this single file from all the partial versions.
+
+To get a better estimation of the classification error, we will build $K$ different models of the same code corpus by leaving one file out and then building the model using the remaining files. The file left out is then used as a test as described previously. Finally, we compute the average of the error from the classification error of the $K$ models.
 
 \section*{Conclusion}
+
 \end{document}
