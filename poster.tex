@@ -1,4 +1,4 @@
-\documentclass[landscape,final,a0paper,fontscale=0.277]{baposter}
+\documentclass[landscape,final,a0paper,fontscale=0.297]{baposter}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -49,7 +49,7 @@
   bgColorOne=white,
   bgColorTwo=white,
   borderColor=black,
-  headerColorOne=white,
+  headerColorOne=cyan,
   headerColorTwo=white,
   headerFontColor=black,
   boxColorOne=white,
@@ -73,7 +73,7 @@
   % Eye Catcher
   {} 
   % Title
-  {\bf\textsc{Structured Statistical Code Prediction}\vspace{0.5em}}
+  {\bf\textsc{Structured Statistical Source Code Prediction}\vspace{0.5em}}
   % Authors
   {\textsc{Cyrus Omar, Flavio Cruz, Salil Joshi}}
   % University logo
@@ -82,51 +82,93 @@
   %  \includegraphics[height=9.0em]{images/logo}
   %}
 
+\newcommand{\asgn}{\textbf{assignment}}
+\newcommand{\statement}{\textbf{statement}}
+\newcommand{\argument}{\textbf{argument}}
+\newcommand{\other}{\textbf{other}}
+
+\newcommand{\lit}{\textbf{lit}}
+\newcommand{\meth}{\textbf{meth}}
+\newcommand{\var}{\textbf{var}}
+
+\newcommand{\nm}[1]{\#\{#1\}}
+
   \headerbox{Introduction}{name=intro, column=0, row = 0}{
-    Our goal is to predict source code using both the \emph{semantics} of the programming language, and \emph{statistics} about typical usage scenarios. We created a model of source code that uses:
-    \begin{itemize}\compresslist
-        
-      \item \textbf{Semantic Information} in two ways:
-        \begin{itemize}\compresslist
-          \firstitem We use the expected \emph{type} of an expression to constrian predictions. This is similar to (but more general than) what is done in existing IDE code completion systems
-          \item We also condition on the \emph{syntactic context} i.e.\ the structure of the AST in which an expresion appears. For example, in $\texttt{int i =} \Box$ the hole ($\Box$) appears in an assignment context
-        \end{itemize}
-      \item \textbf{Statistical Information} by analyzing existing source code to build a probability distribution for expression while utilizing the language semantics
+  \noindent
+    %Our goal is to predict source code using both the \emph{semantics} of the programming language, and \emph{statistics} derived from code corpuses. 
+    We develop a model that assigns probabilities to expressions, $e$, in the Java programming language. We represented expressions as syntax trees and develop a factored model based on semantic constraints imposed by the Java language, parameterizing it with data gathered from a corpus of open source Java projects.
+    \begin{itemize}\compresslist        
+      \item \textbf{Semantic Constraints}:
+      \item[--] We use the \emph{type} of the expression, $\tau$, to constrain our prediction space. This is similar to, but more general than, what is done by IDE code completion systems that produce unordered lists of members.
+      \item[--] We condition our predictions on the \emph{syntactic context}, $\Sigma$, i.e.\ the AST structure in which the expression appears. For example, in $\texttt{int i = } \Box$ the hole ($\Box$) appears in an assignment context. We consider four kinds of syntactic contexts, $\Sigma \in \{\statement, \asgn, \argument, \other\}$.
+      \item[--] We increase the accuracy of our prediction by using the \emph{variable context}, $\Gamma$, i.e. the set of available variables and their types -- at the point in the program that the expression appears.
     \end{itemize}
 
-    Code prediction is useful for code editors, but also for other specialized tools like enabling programmers with physical impairments to convey source code using input devices more limited than a keyboard
+\noindent
+Code prediction is useful for code editors, but also for other specialized tools like enabling programmers with physical impairments to convey source code using input devices more limited than a keyboard
   }
 
 
   \headerbox{Model}{name=model, column=0, below = intro}{
+  \noindent
+      Our goal is to learn a model that allows us to produce $\mathbf{P}(e|\tau, \Sigma, \Gamma)$. We factor this by  marginalizing over a variable representing the \emph{syntactic form} of the expression,  which will allow us to predict the expression more easily:
+    $$P(e | \tau, \Sigma, \Gamma) = \sum_{\phi \in \Phi} P(e | \phi, \tau, \Sigma, \Gamma) P(\phi | \tau, \Sigma) $$
+	\noindent
+	The syntactic forms we consider are $\Phi = \{\lit, \meth, \var\}$, representing literals (built-in and enumerations), method calls and variables, respectively. We can thus draw our model as follows:
     \begin{displaymath}
     \xymatrix{
-      *+[F]{\txt{Type}} \ar[dr] \ar[drr] & &\\
-      & *+[F]{\txt{Form}} \ar[r] & *+[F]{\txt{Expression}} \\
-      *+[F]{\txt{Context}} \ar[ur] \ar[urr] & &
+      *+[F]{\color{black}\txt{Type ($\tau$)}} \ar[dr] \ar[drr] & &\\
+      & *+[F]{\color{black} \txt{Syntactic\\Form ($\phi$)}} \ar[r] & *+[F]{\color{cyan}\txt{Expression ($e$)}}  \\
+      *+[F]{\color{black}\txt{Syntactic\\Context ($\Sigma$)}} \ar[ur] \ar[urr] & & *+[F]{\color{black}\txt{Variable\\Context ($\Gamma$)}} \ar[u]  
     }
     \end{displaymath}
-
-    Our goal is to learn $\mathbf{P}(\textbf{expression}|\textbf{type},\textbf{context})$. \\We split this as:
-    \begin{itemize}
-      \item {$\mathbf{P}(\textbf{form} |\textbf{type},\textbf{context})$}. The forms an expression may take are:
-        \begin{itemize}\compresslist
-          \firstitem \vskip-5pt Literal
-          \item Variable
-          \item Method\compresslist
-        \end{itemize}
-      \item \vskip-5pt $\mathbf{P}(\textbf{expression} | \textbf{form})$. eg. if we already know we are using a literal, what is the probability we will use the given literal.
-    \end{itemize}
-
-    Then,
-    \vskip-20pt
-    \begin{align*}
-      &\quad P(\text{expression} | \text{type}, \text{context}) =\\
-      &\quad\quad P(\text{expression} | \text{form}) * P(\text{form} | \text{type}, \text{context})
-      \end{align*}
+    \\
   }
+  \headerbox{Prediction}{name=prediction, column=1, row=0}{
+  \noindent
+  We use the notation $\nm{...}$ to represent the number of expressions in the training set constrained by the provided expression, type, form and syntactic context (summing over any omitted categories.)
+  
+  
+  The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
+  $$P(\phi | \tau, \Sigma) = \frac{\nm{\phi,\tau, \Sigma}}{\nm{\tau, \Sigma}}$$
+  
+  The conditional distribution for an expression $e$, given its actual syntactic form, $\phi_e$, is:
+$$P(e | \phi, \tau, \Sigma, \Gamma) =
+\left\{
+	\begin{array}{ll}
+		0  & \mbox{if } \phi \neq \phi_e \\
+		P_{\lit}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \lit\\
+		P_{\var}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \var\\
+		P_{\meth}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \meth
+	\end{array}
+\right.
+$$
 
-  \headerbox{Learning}{name=learning, column=1, row=0}{
+where
+$$P_{\lit}(e | \tau, \Sigma, \Gamma) = \frac{\nm{e, \tau, \Sigma}}{\nm{\lit, \tau, \Sigma}}$$
+$$P_{\var}(e | \tau, \Sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+	\frac{1}{|V(\Gamma, \tau)|} & e : \tau \in \Gamma\\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+$$P_{\meth}(e | \tau, \Sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+	\left(P_{\text{seen}}(\tau, \Sigma)\frac{\nm{(\tau_0, \ldots, \tau_n \rightarrow \tau), \Sigma}}{\nm{\meth, \tau, \Sigma}}\right. & \mathcal{M}(e, \tau_0, \ldots, \tau_n, \tau) \\
+	  \left. + (1 - P_{\text{seen}}(\tau, \Sigma))\frac{1}{|M(\Gamma, \tau)|}\right) \times & \\
+	  \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma)& \\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+$$P_{\text{seen}}(\tau, \Sigma) = \frac{|\nm{\meth, \tau, \Sigma} = 1|}{\nm{\meth, \tau, \Sigma}}$$
+    }
+    
+%    \Gamma \vdash o : \tau_0
+%\land~\Gamma \vdash e_1 : \tau_1~\cdots~\Gamma \vdash e_n : \tau_n
+%\land~\Gamma \vdash \tau_0.m : \tau_1, \ldots, \tau_n \rightarrow \tau
+  \headerbox{Learning}{name=learning, column=1, below=prediction}{
     \setlength{\parindent}{0pt}
     We analyze existing code to learn the following parameters:
     \begin{itemize}
@@ -138,20 +180,6 @@
     \end{itemize}
   }
 
-  \headerbox{Prediction}{name=prediction, column=1, below=learning}{
-    \setlength{\parindent}{0pt}
-    $\mathbf{P}(\textbf{form} | \text{type}, \text{context})$ is a multinomial distribution, computed as:
-    \begin{align*}
-     &P(\text{form} = f | \text{type}, \text{context}) = \\
-     &\quad \frac{\Sigma_{x \in f} n_{f}(x)}{( \Sigma_{l \in \text{literal}} n_{\text{lit}}(l) + \Sigma_{m \in \text{method}} n_{\text{met}}(m) + n_{\text{var}})}
-    \end{align*}
-
-    $\mathbf{P}(\textbf{expression} | \text{form}, \text{type}, \text{context})$ depends on the form:
-    \begin{itemize}
-      \item $P(x | \text{form}=\texttt{variable}, \text{type}, \text{context})$ is a uniform distribution over all variables in scope
-      \item $P(l | \text{form}=\texttt{literal}, \text{type}, \text{context}) = \frac{n_{\text{lit}}(l)}{\Sigma_{l \in \text{literal}} n_{\text{lit}}(l)}$
-    \end{itemize}
-  }
 
   \headerbox{Results}{name=results, column=2, row=0}{
     We tested our predictor using leave-one-out cross validation on blah blah corpuses, and measured the average probability of the correct expression.
