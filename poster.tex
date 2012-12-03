@@ -189,13 +189,13 @@ Here,
   \headerbox{Implementation}{name=impl, column=2, row=0}{
     \noindent
     We implemented our method as a plugin to the Eclipse IDE utilizing the JDT (Java Development Tools) library. This allows us to use Eclipse's Java parser and typechecker, and gives us accesss to functions for walking through Java source code that make it easier to collect the statistics we need.
-
+    
+    We compared our results to probabilities generated using an $n$-gram model, with $n = 3$. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computing using various Python scripts.
   }
 
   \headerbox{Results}{name=results, column=2, below=impl}{
     \noindent
     We tested our predictor using ten-fold cross validation on a few open source projects and measured the average probability of the observed expression according to our model.
-
     We compared this to the average probabilities given as by an n-gram model:
 
     \begin{displaymath}
