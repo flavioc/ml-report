@@ -1,4 +1,4 @@
-\documentclass[landscape,final,a0paper,fontscale=0.297]{baposter}
+\documentclass[landscape,final,paperwidth=40in,paperheight=32in,fontscale=0.33]{baposter}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -198,16 +198,7 @@ Here,
     We tested our predictor using ten-fold cross validation on a few open source projects and measured the average probability of the observed expression according to our model.
     We compared this to the average probabilities given as by an n-gram model:
 
-    \begin{displaymath}
-      \boxed{
-        \xymatrix{
-          - & & - \\
-           & - & \\
-          -\ar[uu] & - \ar[u] & -\ar[uu]
-        }
-    }
-    \end{displaymath}
-
+	\vspace{2.8in}
     \noindent
     While these results are promising, we did notice that a large number of observed expressions are assigned 0 probability by our model. An important reason for this was situations where the predictor was forced to give up due to insufficient training data. Improved handling of this situation will greatly improve our prediction accuracy.
 
@@ -220,7 +211,7 @@ Here,
 
   \headerbox{Acknowledgement}{name=ack, column=2, below=conclusion}{
     \noindent
-    The n-gram model used for comparison was from: {\textit{Hindle, Abram, et al.} "On the naturalness of software." \texttt{Software Engineering (ICSE), 2012 34th International Conference on. IEEE, 2012}}\\
+    The n-gram model used for comparison was from: {\textit{Hindle, Abram, et al.} "On the naturalness of software." \texttt{(ICSE 2012)}}\\
     Thanks to Rachel Aurand for portions of the n-gram implementation
   }
 
