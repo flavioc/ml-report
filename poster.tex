@@ -1,0 +1,219 @@
+\documentclass[landscape,final,paperwidth=40in,paperheight=32in,fontscale=0.33]{baposter}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{url}
+
+\usepackage{multicol}
+
+\usepackage{xypic}
+
+% Multicol Settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setlength{\columnsep}{1.5em}
+\setlength{\columnseprule}{0mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Save space in lists. Use this after the opening of the list
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\compresslist}{%
+\setlength{\itemsep}{1pt}%
+\setlength{\parskip}{0pt}%
+\setlength{\parsep}{0pt}%
+}
+
+\newcommand{\firstitem}{\item\vskip-5pt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Begin of Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Here starts the poster
+%%%---------------------------------------------------------------------------
+%%% Format it to your taste with the options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define some colors
+
+\begin{poster}%
+  % Poster Options
+  {
+  % Show grid to help with alignment
+  grid=false,
+  columns=3,
+  % Column spacing
+  colspacing=1em,
+  % Color style
+  bgColorOne=white,
+  bgColorTwo=white,
+  borderColor=black,
+  headerColorOne=cyan,
+  headerColorTwo=white,
+  headerFontColor=black,
+  boxColorOne=white,
+  boxColorTwo=white,
+  % Format of textbox
+  textborder=rounded,
+  % Format of text header
+  eyecatcher=true,
+  headerborder=closed,
+  headerheight=0.1\textheight,
+%  textfont=\sc, An example of changing the text font
+  headershape=rounded,
+  headershade=plain,
+  headerfont=\Large\bf\textsc, %Sans Serif
+  textfont={\setlength{\parindent}{1.5em}},
+  boxshade=plain,
+%  background=shade-tb,
+  background=plain,
+  linewidth=1pt
+  }
+  % Eye Catcher
+  {} 
+  % Title
+  {\bf\textsc{Structured Statistical Source Code Prediction}\vspace{0.5em}}
+  % Authors
+  {\textsc{Cyrus Omar, Flavio Cruz, Salil Joshi}}
+  % University logo
+  {}
+  %{% The makebox allows the title to flow into the logo, this is a hack because of the L shaped logo.
+  %  \includegraphics[height=9.0em]{images/logo}
+  %}
+
+\newcommand{\asgn}{\textbf{assignment}}
+\newcommand{\statement}{\textbf{statement}}
+\newcommand{\argument}{\textbf{argument}}
+\newcommand{\other}{\textbf{other}}
+
+\newcommand{\lit}{\textbf{lit}}
+\newcommand{\meth}{\textbf{meth}}
+\newcommand{\var}{\textbf{var}}
+
+\newcommand{\nm}[1]{\#\{#1\}}
+
+  \headerbox{Introduction}{name=intro, column=0, row = 0}{
+  \noindent
+    %Our goal is to predict source code using both the \emph{semantics} of the programming language, and \emph{statistics} derived from code corpuses. 
+    We develop a model that assigns probabilities to expressions, $e$, in the Java programming language. We represented expressions as syntax trees and develop a factored model based on semantic constraints imposed by the Java language, parameterizing it with data gathered from a corpus of open source Java projects.
+    \begin{itemize}\compresslist        
+      \item \textbf{Semantic Constraints}:
+      \item[--] We use the \emph{type} of the expression, $\tau$, to constrain our prediction space. This is similar to, but more general than, what is done by IDE code completion systems that produce unordered lists of members.
+      \item[--] We condition our predictions on the \emph{syntactic context}, $\Sigma$, i.e.\ the AST structure in which the expression appears. For example, in $\texttt{int i = } \Box$ the hole ($\Box$) appears in an assignment context. We consider four kinds of syntactic contexts, $\Sigma \in \{\statement, \asgn, \argument, \other\}$.
+      \item[--] We increase the accuracy of our prediction by using the \emph{variable context}, $\Gamma$, i.e. the set of available variables and their types -- at the point in the program that the expression appears.
+    \end{itemize}
+
+\noindent
+Code prediction is useful for code editors, but also for other specialized tools like enabling programmers with physical impairments to convey source code using input devices more limited than a keyboard
+  }
+
+
+  \headerbox{Model}{name=model, column=0, below = intro}{
+  \noindent
+      Our goal is to learn a model that allows us to produce $\mathbf{P}(e|\tau, \Sigma, \Gamma)$. We factor this by  marginalizing over a variable representing the \emph{syntactic form} of the expression,  which will allow us to predict the expression more easily:
+    $$P(e | \tau, \Sigma, \Gamma) = \sum_{\phi \in \Phi} P(e | \phi, \tau, \Sigma, \Gamma) P(\phi | \tau, \Sigma) $$
+	\noindent
+	The syntactic forms we consider are $\Phi = \{\lit, \meth, \var\}$, representing literals (built-in and enumerations), method calls and variables, respectively. We can thus draw our model as follows:
+    \begin{displaymath}
+    \xymatrix{
+      *+[F]{\color{black}\txt{Type ($\tau$)}} \ar[dr] \ar[drr] & &\\
+      & *+[F]{\color{black} \txt{Syntactic\\Form ($\phi$)}} \ar[r] & *+[F]{\color{cyan}\txt{Expression ($e$)}}  \\
+      *+[F]{\color{black}\txt{Syntactic\\Context ($\Sigma$)}} \ar[ur] \ar[urr] & & *+[F]{\color{black}\txt{Variable\\Context ($\Gamma$)}} \ar[u]  
+    }
+    \end{displaymath}
+    \\
+  }
+
+\headerbox{Learning}{name=learning, column=1, row=0}{
+  \noindent
+  We use the notation $\nm{...}$ to represent the number of expressions in the training set constrained by the provided expression, type, form and syntactic context (summing over any omitted categories.). We analyze existing code to learn the following parameters:
+  \begin{itemize}
+    \firstitem For each literal $l$ of type $\tau$, $\nm{l, \lit, \tau , \Sigma}$ (=$\nm{l, \tau, \Sigma}$)
+    \item For each method $m$ with return type $\tau$, $\nm{m, \meth, \tau, \Sigma}$ (=$\nm{m, \tau, \Sigma}$)
+    \item For each $\phi \in \Phi$, $\nm{\phi, \tau, \Sigma}$ and therefore $\nm{\tau, \Sigma}$
+    \item Number of distinct methods used: $|\{m | \nm{m, \meth, \tau, \Sigma} > 0\}|$
+  \end{itemize}
+}
+
+  \headerbox{Prediction}{name=prediction, column=1, below=learning}{
+  \noindent
+  We use the notation $\nm{...}$ to represent the number of expressions in the training set constrained by the provided expression, type, form and syntactic context (summing over any omitted categories.)
+  
+  
+  The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
+  $$P(\phi | \tau, \Sigma) = \frac{\nm{\phi,\tau, \Sigma}}{\nm{\tau, \Sigma}}$$
+  
+  The conditional distribution for an expression $e$, given its actual syntactic form, $\phi_e$, is:
+  \vskip-15pt
+$$P(e | \phi, \tau, \Sigma, \Gamma) =
+\left\{
+	\begin{array}{ll}
+		0  & \mbox{if } \phi \neq \phi_e \\
+		P_{\lit}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \lit\\
+		P_{\var}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \var\\
+		P_{\meth}(e | \tau, \Sigma, \Gamma) & \mbox{if } \phi = \phi_e = \meth
+	\end{array}
+\right.
+$$
+
+where
+  \vskip-13pt
+$$P_{\lit}(e | \tau, \Sigma, \Gamma) = \frac{\nm{e, \tau, \Sigma}}{\nm{\lit, \tau, \Sigma}}$$
+$$P_{\var}(e | \tau, \Sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+	\frac{1}{|V(\Gamma, \tau)|} & e : \tau \in \Gamma\\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+$$P_{\meth}(e | \tau, \Sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+          \left(P_{\text{unseen}}(\tau, \Sigma)\frac{1}{|M(\Gamma, \tau)|}\right. & \mathcal{M}(e) \\
+	\left. + (1 - P_{\text{unseen}}(\tau, \Sigma))\frac{\nm{e, \tau, \Sigma}}{\nm{\meth, \tau, \Sigma}} \right) \times & \\
+	  \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma)& \\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+  \vskip-8pt
+$$P_{\text{unseen}}(\tau, \Sigma) = \frac{ |\{m | \nm{m, \meth, \tau, \Sigma} > 0\}|}{\nm{\meth, \tau, \Sigma} + \eta}$$
+Here, 
+  \begin{itemize}\compresslist
+    \firstitem $\mathcal{M}(e) = (e \equiv o.m(e_1, \ldots, e_n))  \land \Gamma \vdash o : \tau_0 \land \tau_0.m : \tau_1, \ldots, \tau_n \to \tau$
+    \item $M(\Gamma, \tau)$ is the set of unused methods with return type $\tau$: \\ $\{m | m : \tau_1, \ldots, t_n \to \tau \land \nm{m, \meth, \tau, \Sigma} = 0\}$
+    \item And $V(\Gamma, \tau)$ is the set of variables of  in scope with type $\tau$
+  \end{itemize}
+    }
+
+  \headerbox{Implementation}{name=impl, column=2, row=0}{
+    \noindent
+    We implemented our method as a plugin to the Eclipse IDE utilizing the JDT (Java Development Tools) library. This allows us to use Eclipse's Java parser and typechecker, and gives us accesss to functions for walking through Java source code that make it easier to collect the statistics we need.
+    
+    We compared our results to probabilities generated using an $n$-gram model, with $n = 3$. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computing using various Python scripts.
+  }
+
+  \headerbox{Results}{name=results, column=2, below=impl}{
+    \noindent
+    We tested our predictor using ten-fold cross validation on a few open source projects and measured the average probability of the observed expression according to our model.
+    We compared this to the average probabilities given as by an n-gram model:
+
+	\vspace{2.8in}
+    \noindent
+    While these results are promising, we did notice that a large number of observed expressions are assigned 0 probability by our model. An important reason for this was situations where the predictor was forced to give up due to insufficient training data. Improved handling of this situation will greatly improve our prediction accuracy.
+
+  }
+
+  \headerbox{Conclusions}{name=conclusion, column=2, below=results}{
+    \noindent
+    Our tests show that our method performs significantly better than an n-gram model. This indicates that taking language semantics into account is useful for code prediction systems.
+  }
+
+  \headerbox{Acknowledgement}{name=ack, column=2, below=conclusion}{
+    \noindent
+    The n-gram model used for comparison was from: {\textit{Hindle, Abram, et al.} "On the naturalness of software." \texttt{(ICSE 2012)}}\\
+    Thanks to Rachel Aurand for portions of the n-gram implementation
+  }
+
+  \end{poster}
+  \end{document}
