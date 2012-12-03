@@ -124,7 +124,19 @@ Code prediction is useful for code editors, but also for other specialized tools
     \end{displaymath}
     \\
   }
-  \headerbox{Prediction}{name=prediction, column=1, row=0}{
+
+\headerbox{Learning}{name=learning, column=1, row=0}{
+  \noindent
+  We use the notation $\nm{...}$ to represent the number of expressions in the training set constrained by the provided expression, type, form and syntactic context (summing over any omitted categories.). We analyze existing code to learn the following parameters:
+  \begin{itemize}
+    \firstitem For each literal $l$ of type $\tau$, $\nm{l, \lit, \tau , \Sigma}$ (=$\nm{l, \tau, \Sigma}$)
+    \item For each method $m$ with return type $\tau$, $\nm{m, \meth, \tau, \Sigma}$ (=$\nm{m, \tau, \Sigma}$)
+    \item For each $\phi \in \Phi$, $\nm{\phi, \tau, \Sigma}$ and therefore $\nm{\tau, \Sigma}$
+    \item Number of distinct methods used: $|\{m | \nm{m, \meth, \tau, \Sigma} > 0\}|$
+  \end{itemize}
+}
+
+  \headerbox{Prediction}{name=prediction, column=1, below=learning}{
   \noindent
   We use the notation $\nm{...}$ to represent the number of expressions in the training set constrained by the provided expression, type, form and syntactic context (summing over any omitted categories.)
   
@@ -133,6 +145,7 @@ Code prediction is useful for code editors, but also for other specialized tools
   $$P(\phi | \tau, \Sigma) = \frac{\nm{\phi,\tau, \Sigma}}{\nm{\tau, \Sigma}}$$
   
   The conditional distribution for an expression $e$, given its actual syntactic form, $\phi_e$, is:
+  \vskip-15pt
 $$P(e | \phi, \tau, \Sigma, \Gamma) =
 \left\{
 	\begin{array}{ll}
@@ -145,6 +158,7 @@ $$P(e | \phi, \tau, \Sigma, \Gamma) =
 $$
 
 where
+  \vskip-13pt
 $$P_{\lit}(e | \tau, \Sigma, \Gamma) = \frac{\nm{e, \tau, \Sigma}}{\nm{\lit, \tau, \Sigma}}$$
 $$P_{\var}(e | \tau, \Sigma, \Gamma) = 
 \left\{
@@ -156,35 +170,34 @@ $$P_{\var}(e | \tau, \Sigma, \Gamma) =
 $$P_{\meth}(e | \tau, \Sigma, \Gamma) = 
 \left\{
 	\begin{array}{ll}
-	\left(P_{\text{seen}}(\tau, \Sigma)\frac{\nm{(\tau_0, \ldots, \tau_n \rightarrow \tau), \Sigma}}{\nm{\meth, \tau, \Sigma}}\right. & \mathcal{M}(e, \tau_0, \ldots, \tau_n, \tau) \\
-	  \left. + (1 - P_{\text{seen}}(\tau, \Sigma))\frac{1}{|M(\Gamma, \tau)|}\right) \times & \\
+          \left(P_{\text{unseen}}(\tau, \Sigma)\frac{1}{|M(\Gamma, \tau)|}\right. & \mathcal{M}(e) \\
+	\left. + (1 - P_{\text{unseen}}(\tau, \Sigma))\frac{\nm{e, \tau, \Sigma}}{\nm{\meth, \tau, \Sigma}} \right) \times & \\
 	  \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma)& \\
 	0 & \mbox{o/w}
 	\end{array}
 \right.$$
-$$P_{\text{seen}}(\tau, \Sigma) = \frac{|\nm{\meth, \tau, \Sigma} = 1|}{\nm{\meth, \tau, \Sigma}}$$
+  \vskip-8pt
+$$P_{\text{unseen}}(\tau, \Sigma) = \frac{ |\{m | \nm{m, \meth, \tau, \Sigma} > 0\}|}{\nm{\meth, \tau, \Sigma} + \eta}$$
+Here, 
+  \begin{itemize}\compresslist
+    \firstitem $\mathcal{M}(e) = (e \equiv o.m(e_1, \ldots, e_n))  \land \Gamma \vdash o : \tau_0 \land \tau_0.m : \tau_1, \ldots, \tau_n \to \tau$
+    \item $M(\Gamma, \tau)$ is the set of unused methods with return type $\tau$: \\ $\{m | m : \tau_1, \ldots, t_n \to \tau \land \nm{m, \meth, \tau, \Sigma} = 0\}$
+    \item And $V(\Gamma, \tau)$ is the set of variables of  in scope with type $\tau$
+  \end{itemize}
     }
-    
-%    \Gamma \vdash o : \tau_0
-%\land~\Gamma \vdash e_1 : \tau_1~\cdots~\Gamma \vdash e_n : \tau_n
-%\land~\Gamma \vdash \tau_0.m : \tau_1, \ldots, \tau_n \rightarrow \tau
-  \headerbox{Learning}{name=learning, column=1, below=prediction}{
-    \setlength{\parindent}{0pt}
-    We analyze existing code to learn the following parameters:
-    \begin{itemize}
-      \item $\mathbf{n}_{\mathbf{lit}}(l)$: For a literal $l$, $\#\{l | \text{type}, \text{context}\}$ i.e.\ the number of times $l$ was used in a given type and context
-      \item $\mathbf{n}_{\mathbf{met}}(m)$ For a method $m$, $\#\{m | \text{type}, \text{context}\}$ i.e.\ the number of times $m$ was used in a given type and context
-      \item $\mathbf{n}_{\mathbf{var}}$: $\#\{\text{variable} | \text{type}, \text{context}\}$ i.e.\ the number of times \emph{any} variable was used in a given type and context
-      \item $\#\{\text{first use of a method } | \text{type}, \text{context}\}$ this is the number of times a previously unseen method was used.
-      \item $\#\{\text{methods} | \text{type}\}$ i.e.\ the number of methods (used and unused) with the appropriate return type
-    \end{itemize}
+
+  \headerbox{Implementation}{name=impl, column=2, row=0}{
+    \noindent
+    We implemented our method as a plugin to the Eclipse IDE utilizing the JDT (Java Development Tools) library. This allows us to use Eclipse's Java parser and typechecker, and gives us accesss to functions for walking through Java source code that make it easier to collect the statistics we need.
+
   }
 
+  \headerbox{Results}{name=results, column=2, below=impl}{
+    \noindent
+    We tested our predictor using ten-fold cross validation on a few open source projects and measured the average probability of the observed expression according to our model.
 
-  \headerbox{Results}{name=results, column=2, row=0}{
-    We tested our predictor using leave-one-out cross validation on blah blah corpuses, and measured the average probability of the correct expression.
+    We compared this to the average probabilities given as by an n-gram model:
 
-    Here is a pretty graph showing the accuracy of our model vs n-gram on a few different projects:
     \begin{displaymath}
       \boxed{
         \xymatrix{
@@ -194,17 +207,21 @@ $$P_{\text{seen}}(\tau, \Sigma) = \frac{|\nm{\meth, \tau, \Sigma} = 1|}{\nm{\met
         }
     }
     \end{displaymath}
+
+    \noindent
+    While these results are promising, we did notice that a large number of observed expressions are assigned 0 probability by our model. An important reason for this was situations where the predictor was forced to give up due to insufficient training data. Improved handling of this situation will greatly improve our prediction accuracy.
+
   }
 
   \headerbox{Conclusions}{name=conclusion, column=2, below=results}{
-    Our tests show that our method performs significantly better than the n-gram model. There are several avenues for future work:
+    \noindent
+    Our tests show that our method performs significantly better than an n-gram model. This indicates that taking language semantics into account is useful for code prediction systems.
+  }
 
-    \begin{itemize}
-      \firstitem Handle the rest of Java
-      \item Make this a proper IDE plugin
-      \item more research 1
-      \item more research 2
-    \end{itemize}
+  \headerbox{Acknowledgement}{name=ack, column=2, below=conclusion}{
+    \noindent
+    The n-gram model used for comparison was from: {\textit{Hindle, Abram, et al.} "On the naturalness of software." \texttt{Software Engineering (ICSE), 2012 34th International Conference on. IEEE, 2012}}\\
+    Thanks to Rachel Aurand for portions of the n-gram implementation
   }
 
   \end{poster}
