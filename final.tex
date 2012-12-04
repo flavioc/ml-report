@@ -1,12 +1,14 @@
 \documentclass{article} % For LaTeX2e
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
 \usepackage{nips12submit_e,times}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{url}
+\usepackage{color}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
-\title{Structured Statistical Code Prediction}
-
+\title{Structured Statistical Source Code Prediction\\
+{\small CMU 10-701 (Machine Learning) - Final Project Report}}
 \author{
   Cyrus Omar\\
   \texttt{comar@cs.cmu.edu}
@@ -20,6 +22,8 @@
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
 
+\usepackage{xypic}
+
 \nipsfinalcopy % Uncomment for camera-ready version
 
 \begin{document}
@@ -31,33 +35,52 @@
 Programming languages are formal systems with rich syntactic and semantic structure. They are
 also human systems, in that they are used extensively by people in patterned ways to express their
 intent. Many tools are designed to help people write code more efficiently by predicting
-the developer's intent. For example, code completion systems in editors like Eclipse display pop-up menus containing members relevant to the class that the developer is working with. 
+the source code that a developer intends. For example, code completion systems for editors like Eclipse for Java display pop-up menus containing the members of to the class of the variable being manipulated. 
 
-Typical code completion systems use only syntactic and semantic
-information about the language and APIs, rather than data about how developers have written programs
-in the past. Recent work by Hindle et al.~\cite{Hindle:2012:NS:2337223.2337322} showed, however, that source code could be modeled statistically
-using a simple n-gram model that used a tokenized, sequential representation of source code. 
+Typical code completion systems use only this sort of semantic
+information about the language and the libraries being used, and do not incorporate data about how developers have written programs
+in the past. Recent work by Hindle et al.~\cite{Hindle:2012:NS:2337223.2337322} demonstrated, however, that source code could be successfully predicted statistically
+using a simple $n$-gram model that used a tokenized, rather than structural, representation of source code. 
 
 Our project aims to unite the structured and statistical approaches to source code prediction.
-Specifically, rather than using a tokenized representation of source code, we would like to do
-statistical prediction on a more natural representation of source code: the syntax tree.  We constrain our predictions by utilizing structural information, specifically: the expected \emph{type} of the expression, and the syntactic \emph{context} in which the expression occurs (e.g. whether the expression is an argument of a function call, the guard of an \verb|if| statement, etc.).
+That is, rather than using a tokenized representation of source code, we would like to do
+statistical prediction on a more natural representation of source code: the typed syntax tree.  We can then condition our predictions using semantic information, specifically:
+\begin{itemize}
+\item the \emph{type}, denoted $\tau$, of the expression being predicted (e.g. \verb|int| or \verb|Color|)
+\item the \emph{syntactic context}, denoted $\sigma$, in which the expression occurs (e.g. whether the expression is an argument of a function call, the guard of an \verb|if| statement, etc.)
+\item the \emph{program context}, denoted $\Gamma$, in which the expression occurs (i.e. the set of variables paired with their types that are in scope at the location that the expression occurs.)
+\end{itemize}
 
-For example, if a user has entered the code \texttt{Planet destination = }, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|), then we know that the only valid predictions are literal members of the \verb|Planet| enumeration, variables of type \verb|Planet| in the scope or calls to methods with return type \texttt{Planet}. The context in this example is an assignment context. The prediction is then made based first on how often an expression of type \verb|Planet| in such context was found to be a literal or a variable or a method invocation from our prior analysis of a code corpus, and further refined based on information about specific literals, variables or methods that is available from these corpus analyses as well (smoothed using some suitable method in cases where enough information is not available).
+For example, if a user has entered the code \texttt{Planet destination = }, where \verb|Planet| is an enumeration containing \verb|Mercury|, \verb|Venus|, \verb|Earth|, etc. (but not \verb|Pluto|, of course), then we have that the expected type at the cursor is \verb|Planet|, the syntactic context is \emph{assignment}, and given a program context, our prediction space should only assign non-zero probabilities to:
+\begin{itemize}
+\item literal members of the \verb|Planet| enumeration (e.g. \verb|Planet.EARTH|)
+\item variables and fields of type \verb|Planet| available from the program context
+\item calls to methods available from the program context that have return type \texttt{Planet}\footnote{We can consider  operators like $+$ and $[]$ as methods of the built-in types in Java.}
+\end{itemize}
+To assign a probability to an expression, denoted $e$, we first determine how likely it is that the expression is of each of these three \emph{syntactic forms}, where syntactic forms are denoted $\phi$. For each form, we can then assign probabilities to particular expressions of that form according to some form-specific conditional distribution. This model can be understood as a graphical model, as shown in Figure \ref{graphicalmodel}, where the syntactic form is a latent variable. The conditional distributions for both the syntactic form and expression are learned using data gathered from analyses of prior code corpuses (smoothed using some suitable method in cases where enough information is not available).
 
-In addition to applications to code completion systems in code editors like Eclipse, more accurate source code prediction techniques could be useful for other tools. For example, programmers with severe physical impairments may benefit from more specialized tools that allow them convey source code using devices more limited than a keyboard, incorporating predictions to reduce the amount of information that needs to be conveyed explicitly.
+\begin{figure}
+    \begin{displaymath}
+    \xymatrix{
+      *+[F]{\color{ForestGreen}\txt{Type ($\tau$)}} \ar[dr] \ar[drr] & & \\
+      & *+[F]{\color{black} \txt{Syntactic\\Form ($\phi$)}} \ar[r] & *+[F]{\color{cyan}\txt{Expression ($e$)}}  \\
+      *+[F]{\color{ForestGreen}\txt{Syntactic\\Context ($\sigma$)}} \ar[ur] \ar[urr] & & *+[F]{\color{ForestGreen}\txt{Program\\Context ($\Gamma$)}} \ar[u]  
+    }
+    \end{displaymath}
+\caption{A graphical model representing our approach. Green variables are always observed (we do not assign marginal distributions to them.) The syntactic form, $\phi$, is a latent variable, and the expression, $e$, is unknown. Note that the syntactic form is a function of the expression. \label{graphicalmodel}}
+\end{figure}
+
+In addition to the applications to code completion systems in code editors like Eclipse, more accurate source code prediction techniques could be useful for other programming tools. For example, programmers with severe physical impairments may benefit from predictive programming interfaces that allow them convey source code using devices more limited than a keyboard, incorporating the predictions to reduce the amount of information that needs to be conveyed explicitly by the user.
 
 \section*{Related Work}
-As mentioned above, work by Hindle et al. \cite{Hindle:2012:NS:2337223.2337322} showed that using a simple $n$-gram model of source code, represented as sequences of tokens, produced reasonably accurate predictions. This work (published this summer) suggested constraining this model using structural information as future work that might further improve predictions. 
+As mentioned above, work by Hindle et al. \cite{Hindle:2012:NS:2337223.2337322} showed that using a simple $n$-gram model of source code, represented as sequences of tokens, produced reasonably accurate predictions. This work (published this summer) suggested improving this model with structural and semantic information as future work. We have corresponded with the authors of this paper.
 
 Work examining the ``uniqueness'' of software has found that source code can often be decomposed into commonly-seen motifs \cite{Gabel:2010:FSE}, further suggesting that prediction that uses structural information may be a particularly helpful approach in the domain of source code.
 
-Several code completion systems that incorporate statistical information in a limited context, such as specifically for predicting which methods of a class will be called, have been produced in the past \cite{Bruch:2009:LEI:1595696.1595728,robbes_how_2008}. The work by Robbes and Lanza \cite{robbes_how_2008} defined a methodology by which to compare different prediction engines in such settings, which can be generalized to our approach as well. 
-
-Other systems, such as Calcite \cite{mooty_calcite:_2010}, have produced contextually-relevant {\em code snippets} or examples drawn from a code corpus or web search, where more frequently encountered snippets are preferentially shown. These can be considered special cases of the approach we are taking in our project.
+Code completion systems that use statistical information in a limited context, such as specifically for predicting which methods of a class will be called, have been proposed in the literature \cite{Bruch:2009:LEI:1595696.1595728,robbes_how_2008}. Other systems, such as Calcite \cite{mooty_calcite:_2010}, have produced contextually-relevant {\em code snippets} or examples drawn from a code corpus or web search, where more frequently encountered snippets are preferentially shown. These can all be construed as related, more specialized, variants of the approach we are taking in our project.
 
 
 \section*{Method}
-We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model (see above). Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
 \subsection*{Model}
 The model we use for code prediction can be stated as:
@@ -110,6 +133,7 @@ Then the \emph{form} of $e$ can be predicted using this equation, however it wil
 This two-step approach negates the need to solve the difficult problem of smoothing our data. Smoothing at the level of contexts is unneccessary since we always have enough data. Smoothing at the level of types is also not required, since the prediction algorithm can handle cases where we have insufficient data in a natural fashion.
 
 \subsection*{Implementation}
+We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model (see above). Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
 We implemented our prediction model using the Eclipse Java Development Tools (JDT) library. This library provides not only facilities for parsing Java code and retrieving the type information of code expressions, but also for doing AST visits of every expression and retrieving information about types, such as methods, fields, argument types, variables in scope, etc.
 
