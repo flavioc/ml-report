@@ -111,27 +111,37 @@ This two-step approach negates the need to solve the difficult problem of smooth
 
 \subsection*{Implementation}
 
-We implemented our prediction model using the Eclupse Java Development Tools (JDT) library
+We implemented our prediction model using the Eclipse Java Development Tools (JDT) library. This library provides not only facilities for parsing Java code and retrieving the type information of code expressions, but also for doing AST visits of every expression and retrieving information about types, such as methods, fields, argument types, variables in scope, etc.
 
-We have written code for analyzing code corpuses as a plugin to the popular Eclipse IDE. This allows us to use Eclipse's Java parser and typechecker. Eclipse also provides functions that make it easy to walk through the source code to collect the data we need.
+To learn the parameters of our model, we determine the frequencies of each expression form, given its type and also it's context.
+Context can be either \textit{variable declaration} (expression appears as the initializer of a variable), \textit{statement}, \textit{method argument} (expression is the argument of a method invocation) or \textit{other} (everything else).
 
-To collect statistics about a given code corpus, we first parse each Java file and generate the Abstract Syntax Tree (AST) with the corresponding type information. For this task, we use the JDT (Java Development Tools) library. Then, we run three visitors that identify the three forms that each expression can take:
+We have implemented three code visitors to collect data about the three expression forms:
 
 \begin{description}
-   \item[Literal Visitor:] For primitive types such as integers, floats, doubles or strings, we count the frequency of each literal in the code. For enumeration types (like \texttt{Planet}), we count the frequency of each element of the enumeration.
+   \item[Literal Visitor:] For primitive types such as integers, floats, doubles or strings we count the frequency of each literal in the code. For enumeration types (like \texttt{Planet}), we count the frequency of each element of the enumeration.
 
    \item[Variable Visitor:] For each type, we count the number of times a variable of this type was referenced in the code.
 
-   \item[Method Visitor:] We group methods by the return type, so that we can count the number of times each method is used.
+   \item[Method Visitor:] We group methods by the return type, so that we can count the number of times each method is used. We also collect data about all the declared methods.
 \end{description}
+
+For prediction, we make use of another visitor in order to go through all the expressions in the target file. To compute the probability of an expression $e$ to be found at that point in the file, we determine the context $\sigma$ of $e$ and it's type $\tau$. We
+then count the number of literals, variables and methods that we found during the collection phase with the same $\sigma$ and $\tau$. We then do a case analysis on the form of $e$:
+
+\begin{itemize}
+   \item For literals, we compute the relative frequency of all literals over all expressions forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
+   \item For variables we also compute the relative frequency of variables over all expressions forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then do a visit on $m$ to locate all variables that appear before $e$ and have type $\tau$.
+   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the relative frequency of methods of type $\tau$ and context $\sigma$. 
+\end{itemize}
 
 \section*{Experiments}
 
 Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we used already available software code to automatically test our prediction facilities.
 
 Our experiments makes use of freely available code corpuses listed in Qualitas Corpus (\url{http://qualitascorpus.com/}).
-Table~\ref{tab:projects} presents the projects we picked from the catalogue. We also show the number of files and the
-lines of code (LOC) for each project.
+Table~\ref{tab:projects} presents the projects we picked from the catalogue. We also show the number of files and
+lines of code (LOC) of every project.
 
 \begin{table}[ht]
 \centering
@@ -140,11 +150,11 @@ lines of code (LOC) for each project.
 \textbf{Project} & \textbf{\# Files} & \textbf{\# LOC} & \textbf{Description} \\
 \hline
 Ant & 1196 & 256039 & a software tool for automating software build processes \\
-ANTLR & 394 & 66845 & a language tool that provides a framework for implementing compilers \\
+ANTLR & 394 & 66845 & a framework for implementing compilers \\
 Art Of Illusion & 487 & 153645 & an open source 3D modelling and rendering studio \\
 Axion & 237 & 42329 & a relational database system supporting SQL and JDBC \\
 Batik & 1664 & 366506 & a library for manipulation of SVG files \\
-FindBugs & 1149 & 207827 & a program that uses static analysis to look for bugs in Java code \\
+FindBugs & 1149 & 207827 & a program that uses static analysis to look for bugs \\
 JFreeChart & 1005 & 321551 & a library for displaying professional charts \\
 \hline
 \end{tabular}
@@ -157,7 +167,12 @@ In our experiments we want to determine the probability of our model to predict 
 
 To get a more accurate prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
 
+For comparision with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using several Python scripts.
+
 \section*{Conclusion}
+
+Our project attempts aims to develop prediction models for source code completion through the use of type and context information. We intend to apply them to code software corpuses in order to get assess their accuracy. Finally, we also want to compare our results with other code completion prediction models.
+
 
 \bibliography{midway}
 \bibliographystyle{plain}
