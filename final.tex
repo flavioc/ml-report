@@ -156,7 +156,7 @@ then count the number of literals, variables and methods that we found during th
 \begin{itemize}
    \item For literals, we compute the relative frequency of all literals over all expressions forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
    \item For variables we also compute the relative frequency of variables over all expressions forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then do a visit on $m$ to locate all variables that appear before $e$ and have type $\tau$.
-   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the relative frequency of methods of type $\tau$ and context $\sigma$. 
+   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the probability of a method being seen or not seen depending if it was found during the data collection phase. If the method was not found before, we find all the methods with the same return type using the current scope to get this probability. Finally, we recursively multiply the previous result by the probability of each argument of the method $e$, to get the prediction of the whole expression.
 \end{itemize}
 
 \section*{Experiments}
@@ -191,7 +191,7 @@ In our experiments we want to determine the probability of our model to predict 
 
 To get a more accurate prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
 
-For comparision with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using several Python scripts.
+For comparison with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using several Python scripts.
 
 \section*{Conclusion}
 
