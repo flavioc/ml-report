@@ -1,8 +1,10 @@
 
-all: midway.pdf
+FILE=final
 
-midway.pdf: midway.tex
-	pdflatex midway.tex
-	pdflatex midway.tex
-	bibtex midway
-	pdflatex midway.tex
+all: $(FILE).pdf
+
+$(FILE).pdf: $(FILE).tex
+	pdflatex $(FILE).tex
+	pdflatex $(FILE).tex
+	bibtex $(FILE)
+	pdflatex $(FILE).tex

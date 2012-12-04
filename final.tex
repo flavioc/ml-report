@@ -135,6 +135,8 @@ This two-step approach negates the need to solve the difficult problem of smooth
 \subsection*{Implementation}
 We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model (see above). Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
+We implemented our prediction model using the Eclupse Java Development Tools (JDT) library
+
 We have written code for analyzing code corpuses as a plugin to the popular Eclipse IDE. This allows us to use Eclipse's Java parser and typechecker. Eclipse also provides functions that make it easy to walk through the source code to collect the data we need.
 
 To collect statistics about a given code corpus, we first parse each Java file and generate the Abstract Syntax Tree (AST) with the corresponding type information. For this task, we use the JDT (Java Development Tools) library. Then, we run three visitors that identify the three forms that each expression can take:
@@ -149,14 +151,35 @@ To collect statistics about a given code corpus, we first parse each Java file a
 
 \section*{Experiments}
 
-Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we will use already available software code to automatically test our prediction facilities.
+Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we used already available software code to automatically test our prediction facilities.
 
-Our experiments will make use of freely available code corpuses code such as Qualitas Corpus (\url{http://qualitascorpus.com/}).
+Our experiments makes use of freely available code corpuses listed in Qualitas Corpus (\url{http://qualitascorpus.com/}).
+Table~\ref{tab:projects} presents the projects we picked from the catalogue. We also show the number of files and the
+lines of code (LOC) for each project.
 
-From each code corpus, we leave out one source code file to be used as a test.
-We create many partial versions that end with the start of a function call or variable declaration. This emulates what would happen when a programmer would try to write the code inside the IDE. Therefore, we can apply our model to predict which code is mostly likely to be typed next. Finally, we compute the average of the classification error for this single file from all the partial versions.
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|c|l|}
+\hline
+\textbf{Project} & \textbf{\# Files} & \textbf{\# LOC} & \textbf{Description} \\
+\hline
+Ant & 1196 & 256039 & a software tool for automating software build processes \\
+ANTLR & 394 & 66845 & a language tool that provides a framework for implementing compilers \\
+Art Of Illusion & 487 & 153645 & an open source 3D modelling and rendering studio \\
+Axion & 237 & 42329 & a relational database system supporting SQL and JDBC \\
+Batik & 1664 & 366506 & a library for manipulation of SVG files \\
+FindBugs & 1149 & 207827 & a program that uses static analysis to look for bugs in Java code \\
+JFreeChart & 1005 & 321551 & a library for displaying professional charts \\
+\hline
+\end{tabular}
+\caption{Software projects used in our experiments.}
+\label{tab:projects}
+\end{table}
 
-To get a better estimation of the classification error, we will build $K$ different models of the same code corpus by leaving one file out and then building the model using the remaining files. The file left out is then used as a test as described previously. Finally, we compute the average of the error from the classification error of the $K$ models.
+For each project, we consider a subset of files for testing, the test set, and all the remaining files as the training set.
+In our experiments we want to determine the probability of our model to predict the expressions found in the test set (the prediction rate), given the parameters we found by analyzing the training set.
+
+To get a more accurate prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
 
 \section*{Conclusion}
 
@@ -164,4 +187,3 @@ To get a better estimation of the classification error, we will build $K$ differ
 \bibliographystyle{plain}
 
 \end{document}
->>>>>>> 983d53891bbae807fa16ba4c6236d53235990beb
