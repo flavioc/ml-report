@@ -79,49 +79,102 @@ Work examining the ``uniqueness'' of software has found that source code can oft
 
 Code completion systems that use statistical information in a limited context, such as specifically for predicting which methods of a class will be called, have been proposed in the literature \cite{Bruch:2009:LEI:1595696.1595728,robbes_how_2008}. Other systems, such as Calcite \cite{mooty_calcite:_2010}, have produced contextually-relevant {\em code snippets} or examples drawn from a code corpus or web search, where more frequently encountered snippets are preferentially shown. These can all be construed as related, more specialized, variants of the approach we are taking in our project.
 
-
 \section*{Method}
+\newcommand{\asgn}{\textbf{assignment}}
+\newcommand{\statement}{\textbf{statement}}
+\newcommand{\argument}{\textbf{arg}}
+\newcommand{\other}{\textbf{other}}
 
-\subsection*{Model}
-The model we use for code prediction can be stated as:
-$$ e = \arg\max_e P(e ~|~ \texttt{type} , \texttt{context} ) $$
+\newcommand{\lit}{\textbf{lit}}
+\newcommand{\meth}{\textbf{meth}}
+\newcommand{\var}{\textbf{var}}
 
-Here \texttt{type} is the expected type of the expression. If a given expression $e$ does not have the required type, then $P(e ~|~ \texttt{type})$ is necessarily $0$ (since $e$ cannot appear in this position in any well-typed programming). This drastically reduces our search space.
 
-\texttt{context} is the program context in which this expression is to appear. Some examples of contexts:
-\begin{itemize}
-  \item Assignment: \texttt{Planet p =} $\Box$
-  \item If-test: $\texttt{if }\Box\texttt{ then}\ldots\texttt{else}\ldots$
-  \item Method arguments: $\texttt{O.foo }\Box$
-\end{itemize}
+\newcommand{\nm}[1]{\#\{#1\}}
+\newcommand{\nmm}[1]{\#_M\{#1\}}
 
-The $e$ in the equation above ranges over possible expressions. However we do not search over \emph{all} possible expressions. This is impossible since there may be an infinite number of well formed expressions. Moreover, it is unneccessary since we need only predict the \emph{root} of the syntax tree for $e$. The rest of the nodes in the tree can then be predicted recursively.
+\subsection*{Probability Model}
+      Our goal is to learn a model that allows us to produce $\mathbf{P}(e|\tau, \sigma, \Gamma)$. As we described informally above, we determine this probability by marginalizing over a latent variable that represents the \emph{syntactic form} of the expression, denoted $\phi$:
+    $$P(e | \tau, \sigma, \Gamma) = \sum_{\phi \in \Phi} P(e | \phi, \tau, \sigma, \Gamma) P(\phi | \tau, \sigma)$$
+As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expression, $\sigma \in \Sigma$ is the syntactic context, $\Gamma$ is the program context, and $\phi$ is the syntactic form. We consider syntactic contexts $\Sigma = \{\statement, \asgn, \argument, \other\}$ representing plain statements, assignments to variables, method arguments and a catch-all for other syntactic contexts (e.g. conditional and loop guards, return statements, etc.). We consider syntactic families $\Phi = \{\lit, \var, \meth\}$, representing literals (of built-in and enumeration types), variables and method calls, respectively. 
 
-Thus we first identify the three forms that the tree $e$ can take:
-\begin{itemize}
-  \item $e$ may be just a literal of the appropriate type. For example if the type is an \texttt{enum}, $e$ may be a member of that \texttt{enum}
-  \item $e$ may be a variable in scope of the appropriate type.
-  \item $e$ may be a call to a method that returns the appropriate type. In this case, we predict only the method itself. The arguments to the method can be predicted later recursively.
-\end{itemize}
+	  We use the following notation to represented quantities learned from training data below:
+	  \begin{itemize}
+	  \item $\nm{e, \tau, \phi, \sigma}$ represents the number of expressions in the training set constrained by the provided expression, type, syntactic form and program context (summing over any omitted categories.)
+	  \item $\nmm{\tau_0.m, \tau, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
+  	  \end{itemize}
+  
+  The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
+  $$P(\phi | \tau, \sigma) = 
+  \left\{
+  	\begin{array}{ll}
+	 	\frac{\nm{\phi,\tau, \sigma}}{\nm{\tau, \sigma}} & \nm{\tau, \sigma} \neq 0\\
+		\frac{\nm{\phi, \sigma}}{\nm{\sigma}} & \mbox{o/w}
+	\end{array}
+	\right.
+  $$
+  
+  That is, we use the empirical probability that that the expression has syntactic form $\phi$ given that the expression has type $\tau$ and is in syntactic context $\sigma$. If we have no data for type $\tau$ in that syntactic context, we marginalize over $\tau$.
+  
+  The conditional distribution for an expression $e$ given the syntactic form, if the actual syntactic form of $e$ is $\phi_e$, is broken down according to form as follows:
+  
+$$P(e | \phi, \tau, \sigma, \Gamma) =
+\left\{
+	\begin{array}{ll}
+		P_{\lit}(e | \tau, \sigma, \Gamma) & \mbox{if } \phi = \phi_e = \lit\\
+		P_{\var}(e | \tau, \sigma, \Gamma) & \mbox{if } \phi = \phi_e = \var\\
+		P_{\meth}(e | \tau, \sigma, \Gamma) & \mbox{if } \phi = \phi_e = \meth\\
+		0  & \mbox{if } \phi \neq \phi_e 
+	\end{array}
+\right.
+$$
+\paragraph{Literals}
+For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types (see below.)
 
-\subsection*{Analysis}
-The parameters to our model then, are the probabilities of occurrences of each of these three forms (given the type and context), and in particular the probabilities of occurences of particular expressions of each form. Thus while analysizing a code corpus, we calculate the following:
-\begin{itemize}
-  \item Probability that $e$ is a literal: $P(e \text{ is a literal} ~|~  \texttt{type} , \texttt{context} ) $
-    \begin{itemize}
-      \item Probability that $e$ is a specific literal $l$, given that it is \emph{some} literal: \\$P(e = l ~|~ e \text{ is a literal},  \texttt{type} , \texttt{context} )$
-    \end{itemize}
-  \item Probability that $e$ is some (any) variable $x$ in scope: $P(e = x ~|~ \texttt{type} , \texttt{context})$
-  \item Probability that $e$ is a method call: $P(e \text{ is a method call} ~|~  \texttt{type} , \texttt{context} ) $
-    \begin{itemize}
-      \item Probability that $e$ is a call to a specific method $f$, given that it is \emph{some} method call: \\$P(e = f \ldots ~|~ e \text{ is a method call},  \texttt{type} , \texttt{context} )$
-    \end{itemize}
-\end{itemize}
+$$P_{\lit}(e | \tau, \sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+		\frac{\nm{e, \lit, \tau, \sigma}}{\nm{\lit, \tau, \sigma}} & \nm{\lit, \tau, \sigma} \neq 0\\
+		0 & \mbox{o/w}
+	\end{array}
+\right.$$
+
+\paragraph{Variables} Variables have highly limited lifespans, so there is little empirical data that we can gather about their usage within a novel context. Thus, we simply give all variables available in the program context equal probability. We denote the set of variables of type $\tau$ in $\Gamma$ as $V(\Gamma, \tau)$.
+
+$$P_{\var}(e | \tau, \sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+	\frac{1}{|V(\Gamma, \tau)|} & e : \tau \in \Gamma\\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+$$V(\Gamma, \tau) = \{ x | x : \tau \in \Gamma\}$$
+
+
+\paragraph{Methods}
+$$P_{\meth}(e | \tau, \sigma, \Gamma) = 
+\left\{
+	\begin{array}{ll}
+          \left(P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + \right. & \mathcal{M}(e, \tau, \Gamma)\mbox{ true} \\
+	 \left. ~~P_{\text{seen}}(\tau, \sigma)\frac{\nmm{m, \tau, \sigma}}{\nm{\meth, \tau, \sigma}}\right) \times \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma) & \\
+	0 & \mbox{o/w}
+	\end{array}
+\right.$$
+$$\mathcal{M}(e, \tau, \Gamma) = \exists o, m, n, e_1, \ldots, e_n, \tau_1, \ldots, \tau_n. (e \equiv o.m(e_1, \ldots, e_n))~\land$$
+$$
+\Gamma \vdash o : \tau_o~\land~\Gamma \vdash o.m : \tau_o \rightarrow (\tau_1 \rightarrow \cdots \rightarrow \tau_n) \rightarrow \tau~\land~\Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n$$
+$$P_{\text{unseen}}(\tau, \sigma) = \frac{ |\{m | \nm{m, \meth, \tau, \sigma} > 0\}|}{\nm{\meth, \tau, \sigma} + \eta}$$
+Here, 
+  \begin{itemize}
+    \item $\mathcal{M}(e) = (e \equiv o.m(e_1, \ldots, e_n))  \land \Gamma \vdash o : \tau_0 \land \tau_0.m : \tau_1, \ldots, \tau_n \to \tau$
+    \item $M(\Gamma, \tau)$ is the set of unused methods with return type $\tau$: \\ $\{m | m : \tau_1, \ldots, t_n \to \tau \land \nm{m, \meth, \tau, \sigma} = 0\}$
+    \item And $V(\Gamma, \tau)$ is the set of variables of  in scope with type $\tau$
+  \end{itemize}
 
 \subsection*{Prediction}
 
 Since the number of possible contexts is small and finite, we will always have statistical data about expressions in any given context. However, this is not the case for types, since a programmer may define types that we have never seen before. If this situation occurs, we need to condition probabilities of expressions on just the context and not the type. 
-$$ e = \arg\max_e P(e ~|~ \texttt{context} ) = \arg\max_e \Sigma_{\texttt{type}} P(e ~|~ \texttt{type} , \texttt{context} ) $$
+$$ e = \arg\max_e P(e ~|~ \texttt{context} ) = \arg\max_e \sigma_{\texttt{type}} P(e ~|~ \texttt{type} , \texttt{context} ) $$
 
 Then the \emph{form} of $e$ can be predicted using this equation, however it will not give us a useful prediction for the specific expression (since, if we have not seen the expected type before, we cannot have seen expressions of that type before). So when making a prediction, we use a two-step method: First predict the most likely form of the predicted expression, then either predict or try to guess the specific expression. There are three possibilities for the form of $e$:
 \begin{description}
