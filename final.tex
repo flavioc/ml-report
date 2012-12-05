@@ -5,6 +5,7 @@
 \usepackage{amssymb}
 \usepackage{url}
 \usepackage{color}
+\usepackage{graphicx}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 \title{Structured Statistical Source Code Prediction\\
@@ -133,12 +134,12 @@ Then the \emph{form} of $e$ can be predicted using this equation, however it wil
 This two-step approach negates the need to solve the difficult problem of smoothing our data. Smoothing at the level of contexts is unneccessary since we always have enough data. Smoothing at the level of types is also not required, since the prediction algorithm can handle cases where we have insufficient data in a natural fashion.
 
 \subsection*{Implementation}
-We use the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model (see above). Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
+We used the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{QualitasCorpus:APSEC:2010}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
-We implemented our prediction model using the Eclipse Java Development Tools (JDT) library. This library provides not only facilities for parsing Java code and retrieving the type information of code expressions, but also for doing AST visits of every expression and retrieving information about types, such as methods, fields, argument types, variables in scope, etc.
+We implemented our prediction model using the Eclipse Java Development Tools (JDT) library. This library provides facilities for parsing Java code, for traversing the AST to visit the relevant parts of the tree (such as method declarations or variable bindings etc.) and for retrieving type information.
 
 To learn the parameters of our model, we determine the frequencies of each expression form, given its type and also it's context.
-Context can be either \textit{variable declaration} (expression appears as the initializer of a variable), \textit{statement}, \textit{method argument} (expression is the argument of a method invocation) or \textit{other} (everything else).
+The context can be either \textit{variable declaration} (expression appears as the initializer of a variable), \textit{statement}, \textit{method argument} (expression is the argument of a method invocation) or \textit{other} (everything else).
 
 We have implemented three code visitors to collect data about the three expression forms:
 
@@ -150,24 +151,25 @@ We have implemented three code visitors to collect data about the three expressi
    \item[Method Visitor:] We group methods by the return type, so that we can count the number of times each method is used. We also collect data about all the declared methods.
 \end{description}
 
-For prediction, we make use of another visitor in order to go through all the expressions in the target file. To compute the probability of an expression $e$ to be found at that point in the file, we determine the context $\sigma$ of $e$ and it's type $\tau$. We
+For prediction, we make use of another visitor in order to go through all the expressions in the target file. To compute the probability of an expression $e$ at a certain point in the file, we determine the context $\sigma$ of $e$ and it's type $\tau$. We
 then count the number of literals, variables and methods that we found during the collection phase with the same $\sigma$ and $\tau$. We then do a case analysis on the form of $e$:
 
 \begin{itemize}
    \item For literals, we compute the relative frequency of all literals over all expressions forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
-   \item For variables we also compute the relative frequency of variables over all expressions forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then do a visit on $m$ to locate all variables that appear before $e$ and have type $\tau$.
-   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the probability of a method being seen or not seen depending if it was found during the data collection phase. If the method was not found before, we find all the methods with the same return type using the current scope to get this probability. Finally, we recursively multiply the previous result by the probability of each argument of the method $e$, to get the prediction of the whole expression.
+   \item For variables we also compute the relative frequency of variables over all expressions forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then traverse the AST of $m$ to locate all variables that appear before $e$ and have type $\tau$.
+   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the probability of a method being seen or not seen depending  on whether it was found during the data collection phase. If the method was not found before, we find all the methods with the same return type using the current scope to get this probability. Finally, we recursively multiply the previous result by the probability of each argument of the method $e$, to get the prediction of the whole expression.
 \end{itemize}
 
 \section*{Experiments}
 
-Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we used already available software code to automatically test our prediction facilities.
+%%Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we used already available software code to automatically test our prediction facilities.
 
 Our experiments makes use of freely available code corpuses listed in Qualitas Corpus~\cite{QualitasCorpus:APSEC:2010}.
 Table~\ref{tab:projects} presents the projects we picked from the catalogue. We also show the number of files and
 lines of code (LOC) of every project.
 
-\begin{table}[ht]
+\setlength{\textfloatsep}{10pt}
+\begin{table}[t]
 \centering
 \begin{tabular}{|l|c|c|l|}
 \hline
@@ -179,24 +181,70 @@ Art Of Illusion & 487 & 153645 & an open source 3D modelling and rendering studi
 Axion & 237 & 42329 & a relational database system supporting SQL and JDBC \\
 Batik & 1664 & 366506 & a library for manipulation of SVG files \\
 FindBugs & 1149 & 207827 & a program that uses static analysis to look for bugs \\
-JFreeChart & 1005 & 321551 & a library for displaying professional charts \\
+%JFreeChart & 1005 & 321551 & a library for displaying professional charts \\
 \hline
 \end{tabular}
 \caption{Software projects used in our experiments.}
 \label{tab:projects}
 \end{table}
-
 For each project, we consider a subset of files for testing, the test set, and all the remaining files as the training set.
-In our experiments we want to determine the probability of our model to predict the expressions found in the test set (the prediction rate), given the parameters we found by analyzing the training set.
+In our experiments we want to determine the probability of an observed expression $e$ according to our model (the prediction rate). Ideally, $P(e| \tau, \Sigma)$ should be 1 since $e$ was the expression that was actually observed. Thus a high prediction rate implies an accurate model.
 
-To get a more accurate prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
+To reduce noise in our prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
 
 For comparison with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using several Python scripts.
 
+Our method performed significantly better than the $n$-gram model:\\
+\begin{centering}
+\includegraphics[width=40em, height=24em]{overall.png}
+\end{centering}
+
+We also analyzed the probabilities generated in a few of our runs to try and find areas where we can improve. Here is a histogram of probabilities generated from one run on the ant project:\\
+\begin{centering}
+\includegraphics[width=40em, height=24em]{ant.png}
+\end{centering}
+
+The histogram is shown without the bucket of probabilities $< 0.01$ since there are so many of them. Analysis of our data revealed the following facts:
+\begin{itemize}
+  \item Our predictions are very good for variables. The average probability is high and even probabilities above 0.9 are not uncommon. This indicates that variables are used in predictable ways.
+  \item Our predictions are very bad for \texttt{String}, \texttt{float}, \texttt{double}, and to a certain extent \texttt{int} literals. This is not surprising given our method, but these literals are so common that it would be useful to do something smarter in these cases. For example, for \texttt{int} literals we could imagine using an exponentially decreasing distribution that makes smaller numbers more probable, with added weights given to numbers we have seen before. For \texttt{Strings} we could use an underlying language model.
+  \item Our predictions are also not very good when the expression is a method call. However this is only to be expected. In the case of a method call we are predicting a much larger expression, since we recursively predict the arguments and then multiply the probabilities. Our results improve dramatically if we consider only the \emph{name} of the method being called, which is all that would be required in an IDE code completion setting.
+\end{itemize}
+
+We also performed tests across projects i.e.\ we trained on one project and then calculated probabilities for expressions in a different project. The results are given in Table \ref{tab:cross}.
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+           & Ant   & ANTLR & AoI   & Axion & Batik & FindBugs \\
+\hline
+ Ant       & -     & 14.44 & 12.19 & 11.39 & 12.54 & 12.96    \\
+ANTLR      & 14.04 & -     & 11.33 & 10.17 & 10.64 & 10.84    \\
+AoI        & 18.94 & 17.3  & -     & 17.12 & 16.77 & 15.92    \\
+Axion      & 15.93 & 14.74 & 12.08 & -     & 11.85 & 11.9     \\
+Batik      & 18.71 & 17.35 & 15.11 & 13.84 & -     & 13.94    \\
+FindBugs   & 17.23 & 16.00 & 14.16 & 12.97 & 13.18 & -        \\
+\hline
+\end{tabular}
+\caption{Cross Project probabilities}
+\label{tab:cross}
+\end{table}
+
+From this table we find that in most cases, within-project accuracy is higher than cross-project accuracy, which means that our method does learn facts that are local to the project (AoI is an exception to this rule, and we do not yet have a good explanation for its behavior).
+
+Further, it seems possible that we can use cross-project prediction to learn interesting facts about the similarities between projects. For example, Ant is bad at predicting other projects, except for ANTLR. This is perhaps not a coincidence, because the Ant project has been designed to work well with ANTLR and has specific support for it. However, more analysis is required before we can be can determine whether cross-project accuracy is meaningful.
+
+
 \section*{Conclusion}
 
-Our project attempts aims to develop prediction models for source code completion through the use of type and context information. We intend to apply them to code software corpuses in order to get assess their accuracy. Finally, we also want to compare our results with other code completion prediction models.
+We developed a prediction model for source code completion through the use of type and context information. Upon testing our model on open source code corpuses, we found that our model is several times more accurate than the current state of the art \cite{Hindle:2012:NS:2337223.2337322}, which indicates that using language semantics in addition to statistical information is useful.
 
+There are several avenues for future work:
+\begin{itemize}
+  \item In the previous section we identified some shortcomings of our current model and discussed some possible improvements. We are actively working on these
+  \item We would like to use our model to provide better code completion in Eclipse, and as an aid to limited input devices.
+  \item It seems possible that cross-project predictions can provide information about the similarities between projects. We would like to investigate this idea further.
+\end{itemize}
 
 \bibliography{midway}
 \bibliographystyle{plain}
