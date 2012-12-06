@@ -97,7 +97,7 @@ Code completion systems that use statistical information in a limited context, s
 \subsection*{Probability Model}
       Our goal is to learn a model that allows us to produce $\mathbf{P}(e|\tau, \sigma, \Gamma)$. As we described informally above, we determine this probability by marginalizing over a latent variable that represents the \emph{syntactic form} of the expression, denoted $\phi$:
     $$P(e | \tau, \sigma, \Gamma) = \sum_{\phi \in \Phi} P(e | \phi, \tau, \sigma, \Gamma) P(\phi | \tau, \sigma)$$
-As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expression, $\sigma \in \Sigma$ is the syntactic context, $\Gamma$ is the program context, and $\phi$ is the syntactic form. We consider syntactic contexts $\Sigma = \{\statement, \asgn, \argument, \other\}$ representing plain statements, assignments to variables, method arguments and a catch-all for other syntactic contexts (e.g. conditional and loop guards, return statements, etc.). We consider syntactic families $\Phi = \{\lit, \var, \meth\}$, representing literals (of built-in and enumeration types), variables and method calls, respectively. 
+As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expression, $\sigma \in \Sigma$ is the syntactic context, $\Gamma$ is the program context, and $\phi \in \Phi$ is the syntactic form. We consider syntactic contexts $\Sigma = \{\statement, \asgn, \argument, \other\}$ representing plain statements, assignments to variables, method arguments and a catch-all for other syntactic contexts (e.g. conditional and loop guards, return statements, etc.). We consider syntactic families $\Phi = \{\lit, \var, \meth\}$, representing literals (of built-in and enumeration types), variables and method calls, respectively. 
 
 	  We use the following notation to represented quantities learned from training data below:
 	  \begin{itemize}
@@ -117,7 +117,7 @@ As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expressi
   
   That is, we use the empirical probability that that the expression has syntactic form $\phi$ given that the expression has type $\tau$ and is in syntactic context $\sigma$. If we have no data for type $\tau$ in that syntactic context, we marginalize over $\tau$.
   
-  The conditional distribution for an expression $e$ given the syntactic form, if the actual syntactic form of $e$ is $\phi_e$, is broken down according to form as follows:
+  The conditional distribution for an expression $e$ given the syntactic form, if the actual syntactic form of $e$ is $\phi_e$, is broken down according to the syntactic form as follows:
   
 $$P(e | \phi, \tau, \sigma, \Gamma) =
 \left\{
@@ -129,8 +129,11 @@ $$P(e | \phi, \tau, \sigma, \Gamma) =
 	\end{array}
 \right.
 $$
+
+We now describe how probabilities for expressions of each of the three syntactic forms are computed in the following sections. 
+
 \paragraph{Literals}
-For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types (see below.)
+For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types.
 
 $$P_{\lit}(e | \tau, \sigma, \Gamma) = 
 \left\{
@@ -285,7 +288,7 @@ Batik      & 18.71 & 17.35 & 15.11 & 13.84 & -     & 13.94    \\
 FindBugs   & 17.23 & 16.00 & 14.16 & 12.97 & 13.18 & -        \\
 \hline
 \end{tabular}
-\caption{Cross Project probabilities}
+\caption{Cross Project probabilities.}
 \label{tab:cross}
 \end{table}
 
