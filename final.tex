@@ -102,7 +102,7 @@ As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expressi
 	  We use the following notation to represented quantities learned from training data below:
 	  \begin{itemize}
 	  \item $\nm{e, \tau, \phi, \sigma}$ represents the number of expressions in the training set constrained by the provided expression, type, syntactic form and program context (summing over any omitted categories.)
-	  \item $\nmm{\tau_0.m, \tau, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
+	  \item $\nmm{\tau_0.m, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
   	  \end{itemize}
   
   The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
@@ -152,47 +152,40 @@ $$P_{\var}(e | \tau, \sigma, \Gamma) =
 $$V(\Gamma, \tau) = \{ x | x : \tau \in \Gamma\}$$
 
 
-\paragraph{Methods}
+\paragraph{Methods} For method invocations, we first assign a probability for the method itself, and then recursively assign probabilities to the argument expressions. The product of these probabilities is thus the probability of the expression as a whole.
+
 $$P_{\meth}(e | \tau, \sigma, \Gamma) = 
 \left\{
 	\begin{array}{ll}
-          \left(P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + \right. & \mathcal{M}(e, \tau, \Gamma)\mbox{ true} \\
-	 \left. ~~P_{\text{seen}}(\tau, \sigma)\frac{\nmm{m, \tau, \sigma}}{\nm{\meth, \tau, \sigma}}\right) \times \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma) & \\
+          P_m(\tau_o.m | \tau, \sigma, \Gamma) \prod_{i=1}^n P(e_i | \tau_i, \argument, \Gamma)  & \mathcal{M}(e, \tau, \Gamma)\mbox{ true} \\
 	0 & \mbox{o/w}
 	\end{array}
 \right.$$
-$$\mathcal{M}(e, \tau, \Gamma) = \exists o, m, n, e_1, \ldots, e_n, \tau_1, \ldots, \tau_n. (e \equiv o.m(e_1, \ldots, e_n))~\land$$
-$$
-\Gamma \vdash o : \tau_o~\land~\Gamma \vdash o.m : \tau_o \rightarrow (\tau_1 \rightarrow \cdots \rightarrow \tau_n) \rightarrow \tau~\land~\Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n$$
-$$P_{\text{unseen}}(\tau, \sigma) = \frac{ |\{m | \nm{m, \meth, \tau, \sigma} > 0\}|}{\nm{\meth, \tau, \sigma} + \eta}$$
-Here, 
-  \begin{itemize}
-    \item $\mathcal{M}(e) = (e \equiv o.m(e_1, \ldots, e_n))  \land \Gamma \vdash o : \tau_0 \land \tau_0.m : \tau_1, \ldots, \tau_n \to \tau$
-    \item $M(\Gamma, \tau)$ is the set of unused methods with return type $\tau$: \\ $\{m | m : \tau_1, \ldots, t_n \to \tau \land \nm{m, \meth, \tau, \sigma} = 0\}$
-    \item And $V(\Gamma, \tau)$ is the set of variables of  in scope with type $\tau$
-  \end{itemize}
 
-\subsection*{Prediction}
+We must check that the expression is in fact a well-typed method invocation, which we can do using a type theoretic predicate:
 
-Since the number of possible contexts is small and finite, we will always have statistical data about expressions in any given context. However, this is not the case for types, since a programmer may define types that we have never seen before. If this situation occurs, we need to condition probabilities of expressions on just the context and not the type. 
-$$ e = \arg\max_e P(e ~|~ \texttt{context} ) = \arg\max_e \sigma_{\texttt{type}} P(e ~|~ \texttt{type} , \texttt{context} ) $$
+$$\begin{array}{lll}
+\mathcal{M}(e, \tau, \Gamma) & = & \exists o, m, n, e_1, \ldots, e_n, \tau_o, \tau_1, \ldots, \tau_n. (e \equiv o.m(e_1, \ldots, e_n))~\land\\
+ & & 
+\Gamma \vdash o : \tau_o~\land~\Gamma \vdash o.m : \tau_o \rightarrow (\tau_1 \rightarrow \cdots \rightarrow \tau_n) \rightarrow \tau~\land~\\
+ & & \Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n
+\end{array}$$
 
-Then the \emph{form} of $e$ can be predicted using this equation, however it will not give us a useful prediction for the specific expression (since, if we have not seen the expected type before, we cannot have seen expressions of that type before). So when making a prediction, we use a two-step method: First predict the most likely form of the predicted expression, then either predict or try to guess the specific expression. There are three possibilities for the form of $e$:
-\begin{description}
-  \item[Literal:] If we have data available about probabilities of literals of the expected type, then we may use that to make a prediction. However if we do not, then we predict \emph{any} literal of the expected type.
-  \item[Variable:] Here there are two possibilities. We may either predict the most \emph{recently} used variable in scope, or the most \emph{frequently} used variable in scope. We need further analysis and experimentation to decide which of these two possibilities gives more useful results.
-  \item[Method Call:] Similar to the case for literals. If we have data available about probabilities of methods that return the expected type, then we may use that to make a prediction. However if we do not, then we predict any method that returns the expected type.
-\end{description}
-
-This two-step approach negates the need to solve the difficult problem of smoothing our data. Smoothing at the level of contexts is unneccessary since we always have enough data. Smoothing at the level of types is also not required, since the prediction algorithm can handle cases where we have insufficient data in a natural fashion.
+To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
+\begin{align*}
+P_m(\tau_o.m | \tau, \sigma, \Gamma) & =  P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + 
+P_{\text{seen}}(\tau, \sigma)\frac{\nmm{\tau_o.m, \sigma}}{\nm{\meth, \tau, \sigma}}\\
+P_{\text{unseen}}(\tau, \sigma) & =  \frac{ |\{\tau_o.m | \nmm{\tau_o.m, \sigma} = 1\}|}{\nm{\meth, \tau, \sigma} + \eta}\\
+P_{\text{seen}}(\tau, \sigma) & =  1 - P_{\text{unseen}}(\tau, \sigma)
+\end{align*}
 
 \subsection*{Implementation}
-We used the Java programming language to perform experiments using our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{QualitasCorpus:APSEC:2010}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
+We used the Java programming language to perform experiments to analyze the effectiveness of our methodology. The ideas underlying our project are applicable to any statically typed programming language, but Java has some advantages that are are relevant to us. First, there are large Java code corpuses freely available. Second, there is prior work on predicting Java programs that we can use as a basis for evaluating our model \cite{QualitasCorpus:APSEC:2010}. Lastly, we can use the Eclipse IDE which gives us access to a powerful toolchain for working with Java programs.
 
 We implemented our prediction model using the Eclipse Java Development Tools (JDT) library. This library provides facilities for parsing Java code, for traversing the AST to visit the relevant parts of the tree (such as method declarations or variable bindings etc.) and for retrieving type information.
 
-To learn the parameters of our model, we determine the frequencies of each expression form, given its type and also it's context.
-The context can be either \textit{variable declaration} (expression appears as the initializer of a variable), \textit{statement}, \textit{method argument} (expression is the argument of a method invocation) or \textit{other} (everything else).
+To learn the parameters of our model, we determine the frequencies of each expression form, given its type and also it's syntactic context.
+As above, the context can be either a \textit{variable declaration} (expression appears as the initializer of a variable), \textit{statement}, \textit{method argument} (expression is the argument of a method invocation) or \textit{other} (everything else).
 
 We have implemented three code visitors to collect data about the three expression forms:
 
@@ -205,7 +198,7 @@ We have implemented three code visitors to collect data about the three expressi
 \end{description}
 
 For prediction, we make use of another visitor in order to go through all the expressions in the target file. To compute the probability of an expression $e$ at a certain point in the file, we determine the context $\sigma$ of $e$ and it's type $\tau$. We
-then count the number of literals, variables and methods that we found during the collection phase with the same $\sigma$ and $\tau$. We then do a case analysis on the form of $e$:
+then count the number of literals, variables and methods that we found during the collection phase with the same $\sigma$ and $\tau$. We can then do a case analysis on the form of $e$, consistent with the formulation given above:
 
 \begin{itemize}
    \item For literals, we compute the relative frequency of all literals over all expressions forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
@@ -241,23 +234,35 @@ FindBugs & 1149 & 207827 & a program that uses static analysis to look for bugs 
 \label{tab:projects}
 \end{table}
 For each project, we consider a subset of files for testing, the test set, and all the remaining files as the training set.
-In our experiments we want to determine the probability of an observed expression $e$ according to our model (the prediction rate). Ideally, $P(e| \tau, \Sigma)$ should be 1 since $e$ was the expression that was actually observed. Thus a high prediction rate implies an accurate model.
+In our experiments we want to determine the probability of an observed expression $e$ according to our model (the prediction rate). Ideally, $P(e| \tau, \sigma, \Gamma)$ should be 1 since $e$ was the expression that was actually observed. Thus a high prediction rate implies an accurate model.
 
 To reduce noise in our prediction rate, we use a ten-fold cross validation, where we select 10\% of the files at random as the test set and build our model by using the remaining 90\% of the files. For each file in the test set, we visit all the expressions (including sub-expressions) and compute the prediction rate. We then average the prediction rate of all expressions found to produce the prediction rate for that file. Finally, we average the prediction rate of all files to get a prediction rate for the current iteration of the cross validation procedure.
 
-For comparison with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using several Python scripts.
+\subsection*{Baseline: The $n$-gram model}
+For comparison with the state-of-the-art, we generated probabilities using an $n$-gram model~\cite{Hindle:2012:NS:2337223.2337322}, with $n = 3$ tokens. The $n$-grams were generated using a version of the CMU Language Modeling Toolkit and the probabilities were computed using a Python scripts as follows:
 
-Our method performed significantly better than the $n$-gram model:\\
+$$P(t_3, \ldots, t_n | t_1, t_2) = \prod_{i=3}^n P_{\text{ngram}}(t_i | t_{i-2}, t_{i-1})$$
+
+In the above, the tokens $t_3, \ldots, t_n$ are the tokens from the expression, $e$, and $t_1$ and $t_2$ are the tokens immediately preceding $e$ in the program.
+
+\subsection*{Results}
+Figure \ref{results} compares the probabilities generated by both methods, showing that our method (SSCP) performed significantly better than the $n$-gram model across all projects.
+\begin{figure}
 \begin{centering}
-\includegraphics[width=40em, height=24em]{overall.png}
+\includegraphics[scale=0.4]{overall.png}
 \end{centering}
+\caption{Results showing the average probability assigned to the actual expression for both the $n$-gram model (red) and our model (blue) for each of the six projects that we considered.\label{results}}
+\end{figure}
 
-We also analyzed the probabilities generated in a few of our runs to try and find areas where we can improve. Here is a histogram of probabilities generated from one run on the ant project:\\
+\begin{figure}
 \begin{centering}
-\includegraphics[width=40em, height=24em]{ant.png}
+\includegraphics[scale=0.4]{ant.png}
 \end{centering}
+\caption{A histogram showing the distribution of probabilities assigned to expressions in the Ant project. The bucket for probabilities below 0.1 is omitted, as explained in the text. \label{hist}}
+\end{figure}
 
-The histogram is shown without the bucket of probabilities $< 0.01$ since there are so many of them. Analysis of our data revealed the following facts:
+We also analyzed the probabilities generated in a few of our runs to try and find areas where we can improve. Figure \ref{hist} shows a histogram of probabilities generated from one run on the ant project. The histogram is shown without the bucket of probabilities $< 0.01$ since there are so many of them. Analysis of our data revealed the following facts:
+
 \begin{itemize}
   \item Our predictions are very good for variables. The average probability is high and even probabilities above 0.9 are not uncommon. This indicates that variables are used in predictable ways.
   \item Our predictions are very bad for \texttt{String}, \texttt{float}, \texttt{double}, and to a certain extent \texttt{int} literals. This is not surprising given our method, but these literals are so common that it would be useful to do something smarter in these cases. For example, for \texttt{int} literals we could imagine using an exponentially decreasing distribution that makes smaller numbers more probable, with added weights given to numbers we have seen before. For \texttt{Strings} we could use an underlying language model.
@@ -265,6 +270,7 @@ The histogram is shown without the bucket of probabilities $< 0.01$ since there 
 \end{itemize}
 
 We also performed tests across projects i.e.\ we trained on one project and then calculated probabilities for expressions in a different project. The results are given in Table \ref{tab:cross}.
+
 \begin{table}[h]
 \centering
 \begin{tabular}{|c|c|c|c|c|c|c|c|}
@@ -294,10 +300,14 @@ We developed a prediction model for source code completion through the use of ty
 
 There are several avenues for future work:
 \begin{itemize}
-  \item In the previous section we identified some shortcomings of our current model and discussed some possible improvements. We are actively working on these
+  \item In the previous section we identified some shortcomings of our current model and discussed some possible improvements. We are actively working on these.
   \item We would like to use our model to provide better code completion in Eclipse, and as an aid to limited input devices.
   \item It seems possible that cross-project predictions can provide information about the similarities between projects. We would like to investigate this idea further.
 \end{itemize}
+
+\section*{Acknowledgments}
+
+We are grateful to YoungSeok Yoon for providing example code for an Eclipse plug-in that we used to get started,  to Rachel Aurand for providing source code for the CMU Language Toolkit, and to Avinava Dubey for helpful feedback on the midway report.
 
 \bibliography{midway}
 \bibliographystyle{plain}
