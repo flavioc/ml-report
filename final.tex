@@ -102,7 +102,7 @@ As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expressi
 	  We use the following notation to represented quantities learned from training data below:
 	  \begin{itemize}
 	  \item $\nm{e, \tau, \phi, \sigma}$ represents the number of expressions in the training set constrained by the provided expression, type, syntactic form and program context (summing over any omitted categories.)
-	  \item $\nmm{\tau_0.m, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
+	  \item $\nmm{\tau_0.m, \tau, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
   	  \end{itemize}
   
   The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
@@ -167,15 +167,15 @@ We must check that the expression is in fact a well-typed method invocation, whi
 $$\begin{array}{lll}
 \mathcal{M}(e, \tau, \Gamma) & = & \exists o, m, n, e_1, \ldots, e_n, \tau_o, \tau_1, \ldots, \tau_n. (e \equiv o.m(e_1, \ldots, e_n))~\land\\
  & & 
-\Gamma \vdash o : \tau_o~\land~\Gamma \vdash o.m : \tau_o \rightarrow (\tau_1 \rightarrow \cdots \rightarrow \tau_n) \rightarrow \tau~\land~\\
+\Gamma \vdash o : \tau_o~\land~\Gamma \vdash o.m : \tau_o \to (\tau_1 \to \cdots \to \tau_n) \to \tau~\land~\\
  & & \Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n
 \end{array}$$
 
-To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
+To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used at least once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
 \begin{align*}
 P_m(\tau_o.m | \tau, \sigma, \Gamma) & =  P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + 
 P_{\text{seen}}(\tau, \sigma)\frac{\nmm{\tau_o.m, \sigma}}{\nm{\meth, \tau, \sigma}}\\
-P_{\text{unseen}}(\tau, \sigma) & =  \frac{ |\{\tau_o.m | \nmm{\tau_o.m, \sigma} = 1\}|}{\nm{\meth, \tau, \sigma} + \eta}\\
+P_{\text{unseen}}(\tau, \sigma) & =  \frac{ |\{\tau_o.m | \nmm{\tau_o.m, \sigma} > 0\}|}{\nm{\meth, \tau, \sigma} + \eta}\\
 P_{\text{seen}}(\tau, \sigma) & =  1 - P_{\text{unseen}}(\tau, \sigma)
 \end{align*}
 
@@ -201,20 +201,20 @@ For prediction, we make use of another visitor in order to go through all the ex
 then count the number of literals, variables and methods that we found during the collection phase with the same $\sigma$ and $\tau$. We can then do a case analysis on the form of $e$, consistent with the formulation given above:
 
 \begin{itemize}
-   \item For literals, we compute the relative frequency of all literals over all expressions forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
-   \item For variables we also compute the relative frequency of variables over all expressions forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then traverse the AST of $m$ to locate all variables that appear before $e$ and have type $\tau$.
-   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the probability of a method being seen or not seen depending  on whether it was found during the data collection phase. If the method was not found before, we find all the methods with the same return type using the current scope to get this probability. Finally, we recursively multiply the previous result by the probability of each argument of the method $e$, to get the prediction of the whole expression.
+   \item For literals, we compute the relative frequency of all literals over all expression forms, and multiply it by the relative frequency of the literal value in relation to all literals with the same type and context.
+   \item For variables we also compute the relative frequency of variables over all expression forms and divide this by the number of variables of the same type in the scope of $e$. To find all variables, we first find the method $m$ where $e$ is located and then traverse the AST of $m$ to locate all variables that appear before $e$ and have type $\tau$.
+   \item For method invocations, we compute the relative frequency of methods over all expression forms and multiply it by the probability of a method being seen or not seen depending  on whether it was found during the data collection phase. If the method was not found before, we find all unused methods with the same return type in the current scope. Finally, we recursively multiply the previous result by the probability of each argument of the method $e$, to get the prediction of the whole expression.
 \end{itemize}
 
 \section*{Experiments}
 
 %%Although the best method to test the quality of our models would be to perform an user study, we are a bit more limited in time and resources. Therefore, we used already available software code to automatically test our prediction facilities.
 
-Our experiments makes use of freely available code corpuses listed in Qualitas Corpus~\cite{QualitasCorpus:APSEC:2010}.
+Our experiments use some of the freely available code corpuses listed in Qualitas Corpus~\cite{QualitasCorpus:APSEC:2010}.
 Table~\ref{tab:projects} presents the projects we picked from the catalogue. We also show the number of files and
 lines of code (LOC) of every project.
 
-\setlength{\textfloatsep}{10pt}
+\setlength{\textfloatsep}{25pt}
 \begin{table}[t]
 \centering
 \begin{tabular}{|l|c|c|l|}
