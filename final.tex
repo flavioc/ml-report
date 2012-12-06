@@ -171,7 +171,7 @@ $$\begin{array}{lll}
  & & \Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n
 \end{array}$$
 
-To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
+To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that has not been seen in the training set. In this case, we give an uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
 \begin{align*}
 P_m(\tau_o.m | \tau, \sigma, \Gamma) & =  P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + 
 P_{\text{seen}}(\tau, \sigma)\frac{\nmm{\tau_o.m, \sigma}}{\nm{\meth, \tau, \sigma}}\\
@@ -285,7 +285,7 @@ Batik      & 18.71 & 17.35 & 15.11 & 13.84 & -     & 13.94    \\
 FindBugs   & 17.23 & 16.00 & 14.16 & 12.97 & 13.18 & -        \\
 \hline
 \end{tabular}
-\caption{Cross Project probabilities}
+\caption{Cross Project probabilities.}
 \label{tab:cross}
 \end{table}
 
