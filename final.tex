@@ -133,7 +133,7 @@ $$
 We now describe how probabilities for expressions of each of the three syntactic forms are computed in the following sections. 
 
 \paragraph{Literals}
-For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types.
+For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, this is complex for literals of built-in types, and not doing so simplifies our implementation considerably, so we leave it as future work (discussed below).
 
 $$P_{\lit}(e | \tau, \sigma, \Gamma) = 
 \left\{
