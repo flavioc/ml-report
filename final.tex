@@ -97,12 +97,12 @@ Code completion systems that use statistical information in a limited context, s
 \subsection*{Probability Model}
       Our goal is to learn a model that allows us to produce $\mathbf{P}(e|\tau, \sigma, \Gamma)$. As we described informally above, we determine this probability by marginalizing over a latent variable that represents the \emph{syntactic form} of the expression, denoted $\phi$:
     $$P(e | \tau, \sigma, \Gamma) = \sum_{\phi \in \Phi} P(e | \phi, \tau, \sigma, \Gamma) P(\phi | \tau, \sigma)$$
-As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expression, $\sigma \in \Sigma$ is the syntactic context, $\Gamma$ is the program context, and $\phi$ is the syntactic form. We consider syntactic contexts $\Sigma = \{\statement, \asgn, \argument, \other\}$ representing plain statements, assignments to variables, method arguments and a catch-all for other syntactic contexts (e.g. conditional and loop guards, return statements, etc.). We consider syntactic families $\Phi = \{\lit, \var, \meth\}$, representing literals (of built-in and enumeration types), variables and method calls, respectively. 
+As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expression, $\sigma \in \Sigma$ is the syntactic context, $\Gamma$ is the program context, and $\phi \in \Phi$ is the syntactic form. We consider syntactic contexts $\Sigma = \{\statement, \asgn, \argument, \other\}$ representing plain statements, assignments to variables, method arguments and a catch-all for other syntactic contexts (e.g. conditional and loop guards, return statements, etc.). We consider syntactic families $\Phi = \{\lit, \var, \meth\}$, representing literals (of built-in and enumeration types), variables and method calls, respectively. 
 
 	  We use the following notation to represented quantities learned from training data below:
 	  \begin{itemize}
 	  \item $\nm{e, \tau, \phi, \sigma}$ represents the number of expressions in the training set constrained by the provided expression, type, syntactic form and program context (summing over any omitted categories.)
-	  \item $\nmm{\tau_0.m, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided return type and program context (summing over any omitted categories.)
+	  \item $\nmm{\tau_0.m, \sigma}$ represents the number of method calls to the method $\tau_0.m$ in the training set, constrained by the provided program context.
   	  \end{itemize}
   
   The conditional distribution for the syntactic forms is categorical, with the probability for each $\phi \in \Phi$ learned as:
@@ -117,7 +117,7 @@ As diagrammed in Figure \ref{graphicalmodel}, $\tau$ is the type of the expressi
   
   That is, we use the empirical probability that that the expression has syntactic form $\phi$ given that the expression has type $\tau$ and is in syntactic context $\sigma$. If we have no data for type $\tau$ in that syntactic context, we marginalize over $\tau$.
   
-  The conditional distribution for an expression $e$ given the syntactic form, if the actual syntactic form of $e$ is $\phi_e$, is broken down according to form as follows:
+  The conditional distribution for an expression $e$ given the syntactic form, if the actual syntactic form of $e$ is $\phi_e$, is broken down according to the syntactic form as follows:
   
 $$P(e | \phi, \tau, \sigma, \Gamma) =
 \left\{
@@ -129,8 +129,11 @@ $$P(e | \phi, \tau, \sigma, \Gamma) =
 	\end{array}
 \right.
 $$
+
+We now describe how probabilities for expressions of each of the three syntactic forms are computed in the following sections. 
+
 \paragraph{Literals}
-For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types (see below.)
+For literals, we use the empirical probability of previously seen literals, assigning 0 probability to all others. Although ideally we would assign non-zero probability to unseen literals, not doing so simplifies our implementation considerably due to inadequacies in the Eclipse libraries used to query information about types.
 
 $$P_{\lit}(e | \tau, \sigma, \Gamma) = 
 \left\{
@@ -171,11 +174,11 @@ $$\begin{array}{lll}
  & & \Gamma \vdash e_1 : \tau_1 \land \cdots \land \Gamma \vdash e_n : \tau_n
 \end{array}$$
 
-To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all such methods callable via a variable in the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two possibilities by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set, with a penalty factor $\eta$ in the denominator to ensure that some probability remains for unseen methods. 
+To calculate the probability of a method itself, we consider two cases. It may be a method that we have seen in the training set, in which case we use the empirical probability of that method in the provided syntactic context. It may also be a method that hasn't been seen in the training set. In this case, we give a uniform distribution over all appropriately typed methods callable from the program context, which we denote $M(\Gamma, \tau)$. We weigh each of these two cases by approximating the likelihood that an unseen method is used by the empirical probability that a method was used only once in the training set.
 \begin{align*}
 P_m(\tau_o.m | \tau, \sigma, \Gamma) & =  P_{\text{unseen}}(\tau, \sigma)\frac{1}{|M(\Gamma, \tau)|} + 
 P_{\text{seen}}(\tau, \sigma)\frac{\nmm{\tau_o.m, \sigma}}{\nm{\meth, \tau, \sigma}}\\
-P_{\text{unseen}}(\tau, \sigma) & =  \frac{ |\{\tau_o.m | \nmm{\tau_o.m, \sigma} = 1\}|}{\nm{\meth, \tau, \sigma} + \eta}\\
+P_{\text{unseen}}(\tau, \sigma) & =  \frac{ |\{\tau_o.m | \nmm{\tau_o.m, \sigma} = 1\}|}{\nm{\meth, \tau, \sigma}}\\
 P_{\text{seen}}(\tau, \sigma) & =  1 - P_{\text{unseen}}(\tau, \sigma)
 \end{align*}
 
